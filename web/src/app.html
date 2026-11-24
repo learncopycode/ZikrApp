@@ -50,8 +50,15 @@ input, textarea { font: inherit; color: var(--text); }
 @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } }
 .bar { display: flex; align-items: center; gap: 10px; min-height: 48px; }
 .bar .brand { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+@media (max-width: 430px) { .bar .brand:has(+ .langbtn) { flex-direction: column; gap: 0; } .bar .brand:has(+ .langbtn) b { line-height: 1.1; } }
 .bar .brand b { font-family: var(--font-display); font-weight: 400; font-size: 24px; }
 .bar .brand span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.addpill { height: 40px; flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 0 14px 0 10px; border-radius: 20px; background: var(--accent); color: var(--on-accent); font: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; box-shadow: 0 4px 14px -6px var(--accent); }
+.addpill svg { width: 18px; height: 18px; }
+.bar .brand span { max-width: 100%; }
+@media (max-width: 350px) { .addpill .w { display: none; } .addpill { padding: 0 12px 0 9px; } }
+.mydrop-add { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 28px); margin: 10px 14px 14px; padding: 11px; border-radius: 14px; border: 1.5px dashed color-mix(in srgb, var(--accent) 60%, var(--line)); color: var(--accent); font: inherit; font-size: 14.5px; font-weight: 700; background: transparent; }
+.mydrop-add svg { width: 18px; height: 18px; }
 .icon-btn { width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--card); border: 1px solid var(--line); transition: transform 0.2s; }
 .icon-btn:active { transform: scale(0.92); }
 .icon-btn svg { width: 19px; height: 19px; }
@@ -977,7 +984,7 @@ function updateBadge() {
 const topBar = (title, extra = "") => `<div class="bar"><div class="brand"><b>${title}</b><span>${esc(hijri())}</span></div>${extra}
   <button class="icon-btn langbtn" data-act="lang" aria-label="${BN() ? "Show English translations" : "বাংলা অনুবাদ দেখান"}">${BN() ? "EN" : "বাং"}</button>
   <button class="icon-btn" data-act="theme" aria-label="Switch to ${isLight() ? "dark" : "light"} theme">${isLight() ? ICONS.moon : ICONS.sun}</button>
-  <button class="icon-btn" data-act="add" aria-label="Add a zikr">${ICONS.plus}</button></div>`;
+  <button class="addpill" data-act="add" aria-label="Add a zikr">${ICONS.plus}<span>Add<span class="w"> zikr</span></span></button></div>`;
 
 /* ---------- My Zikr ---------- */
 const DAY_INDEX = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
@@ -1009,7 +1016,8 @@ function homeHTML() {
         <span class="zt"><b>${esc(it.title)}</b>${it.arabic ? `<span class="ar">${esc(it.arabic)}</span>` : ""}</span>
         <span class="zc"><b>${td ? fmt(td) : "–"}</b><small>${td ? "today" : "not yet today"}</small></span></button>`;
     }).join("") + `</div>`;
-  } else h += `<div class="empty">Your list is empty. Tap + to search for a dua, or add one from Discover.</div>`;
+  } else h += `<div class="empty">Your list is empty. Add a dua or zikr to count it here, or pick one in Discover.</div>`;
+  h += `<button class="mydrop-add" data-act="add">${ICONS.plus}Add a zikr or dua</button>`;
   h += `</div></div></section>
     ${prayerCardHTML()}
     ${quranCardHTML()}
