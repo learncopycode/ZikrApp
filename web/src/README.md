@@ -128,7 +128,7 @@ Off claude.ai the page has no access to Claude, so reflections show the Al-Mukht
     the number of their place between two numbered ones). A later Muslim narration (b, c, …) that is the same hadith
     through another chain shows the first narration's Bangla with a note saying so; one whose wording differs shows
     the first narration, then its own Bangla describing the difference. 230 of 233 have Bangla; for Muslim 2700, 2728
-    and 2733 the Bangla edition has only a chain line in place of the text, so those use the marked AI translation.
+    and 2733 the Bangla edition has only a chain line in place of the text, so those stay in English until a Bangla source is found.
 - Home shows **Today's dua and its hadith** under Today's zikr. It alternates daily between a HadeethEnc hadith and a Hisn al-Muslim dua (with the narration and reference the book gives), and every Friday shows Sayyid al-Istighfar with its full hadith from Sahih al-Bukhari 6306 (counted as Hisn al-Muslim 79, the same words). HadeethEnc days show the
   full hadith, its Arabic, grade, and "Explanation & lessons". Discover → "Duas & dhikr from hadith" lists them all.
 - To keep the page under 16 MB the city list is now embedded gzipped too (one city per time zone is kept plain
@@ -174,6 +174,5 @@ The reader marks the last ayah of the portion. The waking hours button on the ca
   Jami` at-Tirmidhi 3507 (fawazahmed0/hadith-api, ben-tirmidhi), the same hadith the list of Names comes from;
   it gives each Name with its meaning in brackets, in the same order. Only three typing slips are corrected
   (listed in the script) and the Assamese letter ৰ, typed by mistake for র, is normalised.
-- Where no published Bangla exists (the Bukhari/Muslim hadiths not matched to a Bangla edition, your own zikrs), Bangla mode on claude.ai shows an AI translation, marked
-  "AI অনুবাদ · ভুল থাকতে পারে", made once and kept on the device. Without AI (the installed app) the English stays,
-  marked "বাংলা অনুবাদ পাওয়া যায়নি".
+- No AI translation is used. Where no published Bangla exists (Sahih Muslim 2700, 2728, 2733, and your own zikrs)
+  the English stays, marked "বাংলা অনুবাদ পাওয়া যায়নি".

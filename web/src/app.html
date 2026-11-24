@@ -663,33 +663,16 @@ function meaningOf(d) {
   if (BN() && QBN && d.qkeys) return d.qkeys.map(k => (startsSurah(k) ? qbn(1, 1) + "\n" : "") + rangeMeaning(k)).join("\n\n");
   return d.meaning;
 }
-/* Where no published Bangla exists (e.g. the 99 Names' meanings, some hadiths, your own zikrs), Bangla mode shows
-   an AI translation on claude.ai, marked as such; without AI the English stays. Published Bangla always comes first. */
+/* Bangla mode shows only published Bangla. Where none exists (three Sahih Muslim hadiths, your own zikrs),
+   the English stays, with a note saying so. */
 const hasPubBn = d => !!d && (d.kind === "name" ? !!NAMES_BN[d.id] : d.qkeys ? !!QBN : d.kind === "he" || d.kind === "sahih" ? !!d.bn : !!(HBN && HBN[d.id]));
 const aiKey = it => it.libraryID ? it.libraryID : "u:" + it.id + ":" + (it.translation || "").length;
 const needsAiBn = it => BN() && !hasPubBn(BY_ID[it.libraryID]) && !!(BY_ID[it.libraryID]?.meaning || it.translation) && !(it.libraryID && (!HBN || !QBN));
-const aiBnOf = it => needsAiBn(it) ? (S.aiBn || {})[aiKey(it)] || null : null;
+const aiBnOf = it => null;   // no AI translation: only published Bangla is shown
 const itemMeaning = it => { const d = BY_ID[it.libraryID]; return aiBnOf(it) || (d ? meaningOf(d) : it.translation); };
-const aiBnBusy = {};
-async function queueAiBn(it) {
-  const k = aiKey(it); if (!needsAiBn(it) || (S.aiBn || {})[k] || aiBnBusy[k]) return;
-  aiBnBusy[k] = "working";
-  const smp = await sampler(); if (!smp) { aiBnBusy[k] = "none"; if ($counter) drawCounter(); return; }
-  const d = BY_ID[it.libraryID], en = d ? d.meaning : it.translation;
-  const what = d?.kind === "name" ? `the meaning of one of the Names of Allah (${d.translit})` : d?.kind === "sahih" || d?.kind === "he" ? "a hadith" : "an Islamic dua or dhikr";
-  try {
-    const r = await smp(`Translate this English rendering of ${what} into Bangla, in the wording Bangladeshi Muslims use (আল্লাহ, দো‘আ, রাসূলুল্লাহ সাল্লাল্লাহু আলাইহি ওয়াসাল্লাম). Keep the meaning exact; do not add or explain anything. Reply with the Bangla translation only.\n\n${en}`, { modelTier: "quick" });
-    const t = (r && r.text || "").trim(); if (t) { S.aiBn = S.aiBn || {}; S.aiBn[k] = t; save(); }
-    aiBnBusy[k] = t ? "done" : "none";
-  } catch (e) { aiBnBusy[k] = "none"; }
-  if ($counter) drawCounter();
-}
 function bnNoteHTML(it) {
   if (!needsAiBn(it)) return "";
-  if (aiBnOf(it)) return `<div class="ainote">AI অনুবাদ · ভুল থাকতে পারে</div>`;
-  if (aiBnBusy[aiKey(it)] === "none") return `<div class="ainote">বাংলা অনুবাদ পাওয়া যায়নি · ইংরেজি দেখানো হলো</div>`;
-  setTimeout(() => queueAiBn(it), 0);
-  return `<div class="ainote">বাংলা অনুবাদ হচ্ছে (AI)…</div>`;
+  return `<div class="ainote">বাংলা অনুবাদ পাওয়া যায়নি · ইংরেজি দেখানো হলো</div>`;
 }
 const chTitle = c => (BN() && HISN_BN_TITLES[Math.round(c.ch ?? c)]) || c.title || "";
 // Older versions had their own library; each entry maps to the same words in Hisn al-Muslim or the Quran.
@@ -764,6 +747,7 @@ if (S.libV === 2) {
   for (const it of S.items) if (!it.libraryID && BY_TITLE[it.title] && BY_ID[BY_TITLE[it.title]]) it.libraryID = BY_TITLE[it.title];
   S.libV = 3; save();
 }
+delete S.aiBn;   // earlier versions kept AI translations; only published Bangla is shown now
 // Library zikrs always show the published text.
 for (const it of S.items) { const d = BY_ID[it.libraryID]; if (d) Object.assign(it, { title: d.title, arabic: d.arabic, translit: d.translit, translation: d.meaning, source: d.source }); }
 const sortedItems = () => S.items.slice().sort((a, b) => a.createdAt - b.createdAt);
@@ -1365,11 +1349,25 @@ function openPlacePicker() {
   draw(""); const inp = document.getElementById("place-q"); inp.oninput = () => draw(inp.value); setTimeout(() => inp.focus(), 300);
 }
 const closePlacePicker = () => $layer.querySelectorAll('.sheet[aria-label="Choose a place"], .scrim[data-act="closeplace"]').forEach(e => e.remove());
+/* The adhan waits until the place is known (detected, chosen, or detection gave up), so it never sounds for a
+   guessed place. When the place changes after that, prayers whose time has already passed there count as done:
+   moving or detecting again never sets off an adhan, only the arrival of a prayer time does. */
+let placeReady = false;
+setTimeout(() => { placeReady = true; }, 20000);   // detection never answered: go on with the saved place
+function markPassedPrayers() {
+  const t = prayerTimesFor(0); if (!t) return;
+  const day = `${t.label.year}-${t.label.month}-${t.label.day}`; S.adhanPlayed = S.adhanPlayed || {};
+  for (const [k] of PT_NAMES) if (t.times[k] && Date.now() >= +t.times[k]) S.adhanPlayed[day + k] = 1;
+  save();
+}
 function setPlace(p, quiet) {
   setTimeout(() => typeof scheduleNativeAdhan === "function" && scheduleNativeAdhan(), 0);
   const old = S.loc, changed = !old || old.name !== p.name || old.tz !== p.tz || Math.abs(old.lat - p.lat) > 0.05 || Math.abs(old.lng - p.lng) > 0.05;
+  const wasReady = placeReady;
   if (!old || old.country !== p.country) { delete S.ptMethod; delete S.ptMadhab; }   // a new country gets its usual method
   S.loc = p; save(); closePlacePicker();
+  if (wasReady && changed) markPassedPrayers();
+  if (!wasReady) { placeReady = true; setTimeout(adhanTick, 0); }
   if (ui.tab === "times" || ui.tab === "home") rerenderKeepScroll();
   if (!quiet || changed) toast(p.source === "gps" ? "Location detected" : p.source === "timezone" ? "Time zone detected" : "Location set", `${p.name}, ${p.country} · ${tzLabel(p.tz)}`);
 }
@@ -1393,7 +1391,8 @@ const useGeolocation = () => detectPlace(true);
 function autoDetectPlace() {
   const pl = S.loc;
   if (!pl || placeSource(pl) !== "manual") detectPlace(false);
-  else if (pl.tz !== deviceTz()) toast("Your time zone changed", `Phone: ${tzLabel(deviceTz())} · tap Detect on the Prayer page`);
+  else { placeReady = true; setTimeout(adhanTick, 0); }
+  if (pl && placeSource(pl) === "manual" && pl.tz !== deviceTz()) toast("Your time zone changed", `Phone: ${tzLabel(deviceTz())} · tap Detect on the Prayer page`);
 }
 setTimeout(autoDetectPlace, 800);
 if (S.readerOpen) setTimeout(() => { if (!$reader) openReader(); }, 0);
@@ -1426,7 +1425,7 @@ const ADHAN_WINDOW = 10 * 60000;
 function adhanTick() {
   const t = prayerTimesFor(0); if (!t) return;
   const day = `${t.label.year}-${t.label.month}-${t.label.day}`, played = S.adhanPlayed = S.adhanPlayed || {};
-  for (const [k] of PT_NAMES) {
+  if (placeReady) for (const [k] of PT_NAMES) {
     if (k === "sunrise" || !adhanOn(k)) continue;
     if (NATIVE() && S.nativeAlarms) continue;   // the system alarm plays the full adhan
     // The adhan plays once per prayer: at its time if the app is open, or when the app is opened within the
