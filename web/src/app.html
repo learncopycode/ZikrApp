@@ -1415,15 +1415,20 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && de
 /* ---------- the adhan ---------- */
 let adhanAudio = null, adhanUnlocked = false;
 const adhanPlaying = () => !!(adhanAudio && !adhanAudio.paused);
-function getAdhanAudio() { if (!adhanAudio) { adhanAudio = new Audio(ADHAN_MP3); adhanAudio.preload = "auto"; adhanAudio.onended = () => { document.querySelector(".adhan-ov")?.remove(); if (ui.tab === "times") rerenderKeepScroll(); }; } return adhanAudio; }
+// Silence used to unlock sound on the first tap: iPhones do not always honour "muted", so the adhan itself is
+// never played to unlock; it is loaded only when it is really time for it.
+const SILENT_WAV = "data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
+function getAdhanAudio() { if (!adhanAudio) { adhanAudio = new Audio(SILENT_WAV); adhanAudio.preload = "auto"; adhanAudio.onended = () => { if (!adhanAudio.src.startsWith("data:audio/mpeg")) return; document.querySelector(".adhan-ov")?.remove(); if (ui.tab === "times") rerenderKeepScroll(); }; } return adhanAudio; }
+const loadAdhan = a => { if (!a.src.startsWith("data:audio/mpeg")) a.src = ADHAN_MP3; return a; };
 // Browsers only allow sound after a tap, so the first tap anywhere quietly prepares the adhan.
 document.addEventListener("pointerdown", () => {
   if (adhanUnlocked) return; adhanUnlocked = true;
-  try { const a = getAdhanAudio(); a.muted = true; a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; adhanUnlocked = false; }); } catch (e) {}
+  try { if (document.querySelector(".adhan-ov")) { adhanUnlocked = false; return; }   // an adhan is waiting for its Play tap
+    const a = getAdhanAudio(); if (a.src !== SILENT_WAV) return; a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => { adhanUnlocked = false; }); } catch (e) {}
 }, true);
 function playAdhan(k) {
   if (k) { const t = prayerTimesFor(0); if (t) { S.adhanPlayed = S.adhanPlayed || {}; S.adhanPlayed[`${t.label.year}-${t.label.month}-${t.label.day}` + k] = 1; save(); } }   // once per prayer
-  const a = getAdhanAudio(); a.currentTime = 0; a.muted = false;
+  const a = loadAdhan(getAdhanAudio()); a.currentTime = 0; a.muted = false;
   document.querySelector(".adhan-ov")?.remove();
   const n = k ? PT_NAMES.find(x => x[0] === k)[1] : "";
   document.body.insertAdjacentHTML("beforeend", `<section class="overlay adhan-ov" role="dialog" aria-label="Adhan" style="${auroraVars(200, 40)}"><div class="inner" style="justify-content:center;min-height:100%">
@@ -2714,7 +2719,7 @@ document.addEventListener("click", e => {
     case "adhantoggle": { const o = S.adhanOn = S.adhanOn || {}; o[b.dataset.k] = !adhanOn(b.dataset.k); save(); scheduleNativeAdhan(); rerenderKeepScroll(); toast(o[b.dataset.k] ? "Adhan on" : "Adhan off", PT_NAMES.find(x => x[0] === b.dataset.k)[1]); break; }
     case "adhantest": if (adhanPlaying()) stopAdhan(); else playAdhan(null); rerenderKeepScroll(); break;
     case "adhanstop": stopAdhan(); if (ui.tab === "times") rerenderKeepScroll(); break;
-    case "adhanplay": getAdhanAudio().play().catch(() => {}); b.hidden = true; b.previousElementSibling?.setAttribute("hidden", ""); break;
+    case "adhanplay": loadAdhan(getAdhanAudio()).play().catch(() => {}); b.hidden = true; b.previousElementSibling?.setAttribute("hidden", ""); break;
     case "prayerafter": stopAdhan(); openPrayer(b.dataset.p); break;
     case "prayer": openPrayer(b.dataset.p); break;
     case "pclose": closePrayer(); break;

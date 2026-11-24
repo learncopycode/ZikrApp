@@ -22,7 +22,17 @@ head = """<!doctype html>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>html, body { margin: 0; padding: 0; } * { box-sizing: border-box; }</style>
-<script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
+<script>
+// Updates: the app checks for a new version when it opens and when it comes back to the screen; once the new
+// version is downloaded it switches to it straight away (instead of on the next opening).
+if ("serviceWorker" in navigator) addEventListener("load", () => {
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register("sw.js").then(reg => {
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) reg.update().catch(() => {}); });
+  }).catch(() => {});
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (had && !window.__zikrReloading) { window.__zikrReloading = true; location.reload(); } });
+});
+</script>
 </head><body>
 """
 os.makedirs(OUT, exist_ok=True)
