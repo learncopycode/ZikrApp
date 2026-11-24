@@ -186,5 +186,10 @@ Checked on 24 Nov 2026: the Arabic matched in all 6,236 ayahs letter for letter 
 dedicated Unicode signs its font draws), (b) the order marks are stored in, and (c) spaces, none of which changes the
 text, and two real defects in quran-json, now corrected from QuranEnc (`quran_fixes.json`, applied by
 `build_quran.py`): 2:72 (a space inside فَٱدَّٰرَٰءۡتُمۡ) and 11:41 (the imala sign of مَجۡر۪ىٰهَا).
+Also checked against Quran.com (`https://api.quran.com/api/v4/quran/verses/qpc_hafs`, the King Fahd Complex's
+QPC Hafs text that Quran.com serves): the same letters and marks in all 6,236 ayahs; Quran.com's QPC Hafs and
+QuranEnc agree with each other in every ayah too. (Quran.com's other text, "Uthmani", follows Tanzil's typing
+conventions, e.g. ى for the dotless ya and a separate hamza mark, so it is compared by meaning of the marks, not code.)
+Every ayah's result is in `quran_check.csv`.
 The English is Saheeh International as published on Tanzil (the earlier edition); QuranEnc carries the later revised
 edition, so wording differs in places (e.g. 1:7 "evoked" / "earned").
