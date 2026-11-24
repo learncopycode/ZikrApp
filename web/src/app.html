@@ -315,6 +315,13 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 .plan-done .ctext { display: flex; flex-direction: column; height: 100%; }
 .hint .ahead-count { color: var(--accent); font-weight: 700; }
 .plan-count b { color: var(--accent); }
+.segs { display: flex; gap: 3px; margin: 8px 6px 0; } .segs i { flex: 1; height: 6px; border-radius: 3px; background: var(--line); transition: background .3s; }
+.segs i.done { background: var(--accent); } .segs i.now { background: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: 0 0 0 1.5px var(--accent) inset; }
+.seal { position: absolute; left: 50%; top: 42%; z-index: 30; transform: translate(-50%, -50%); width: 150px; height: 150px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 65%, #fff), var(--c) 70%, color-mix(in srgb, var(--c) 80%, #000)); color: #fff; box-shadow: 0 20px 50px -12px rgba(0,0,0,.45), inset 0 0 0 5px rgba(255,255,255,.35);
+  animation: seal 1.7s cubic-bezier(.2,1.4,.4,1) forwards; pointer-events: none; text-align: center; }
+.seal b { font-family: var(--font-display); font-size: 52px; line-height: 1; } .seal span { font-size: 12px; font-weight: 700; opacity: .95; padding: 0 12px; } .seal .eyebrow { color: #fff; opacity: .85; }
+@keyframes seal { 0% { transform: translate(-50%, -50%) scale(.3); opacity: 0; } 18% { transform: translate(-50%, -50%) scale(1.06); opacity: 1; } 30% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { transform: translate(-50%, -60%) scale(.9); opacity: 0; } }
 .khatm-total { color: #3f9a6c; font-weight: 700; }
 .planbanner { display: flex; flex-direction: column; gap: 1px; margin: 0 4px 8px; padding: 9px 14px; border-radius: 14px; background: color-mix(in srgb, #5fb98a 16%, var(--card)); border: 1px solid color-mix(in srgb, #5fb98a 45%, var(--line)); font-size: 13.5px; }
 .planbanner b { color: #3f9a6c; font-size: 14px; } .planbanner span { color: var(--muted); }
@@ -2125,6 +2132,7 @@ function drawReader() {
     </div>
     ${plan && ui.planBanner ? `<div class="planbanner"><b>✓ ${esc(ui.planBanner.title)}</b><span>${esc(ui.planBanner.text)}</span></div>` : ""}
     <div class="deck" id="rdeck">${blocked ? currentCardHTML(plan) : `${next ? ayahCardHTML(next, "back") : ""}${ayahCardHTML(p, "top")}`}</div>
+    ${plan && !plan.complete && !blocked ? segsHTML(p) : ""}
     <div class="hint">${plan ? (plan.complete ? "Khatm complete · alhamdulillah" : plan.behind > 0 ? `Read up to ${plan.end.s}:${plan.end.a} · ${plan.behind} ayah${plan.behind === 1 ? "" : "s"} to be current` : blocked ? "Swipe down to read the last ayah again" : (() => { const a = aheadInfo(plan); return `<b class="ahead-count">${a.hours ? `Current ${aheadLabel(a.hours)}` : "Reading ahead"}</b> · ${a.into} of ${hp().per} into the next hour`; })()) : "Swipe for the next ayah · triple-tap for tafsir"}</div>`;
   rSetBack(0); bindReader();
   $reader.querySelectorAll(".card").forEach(fitCard);
@@ -2391,10 +2399,27 @@ function portionPos(p) {
   const o = (ayahIndex(p) - P.startIdx + 6236) % 6236, B = (P.baseDue || 0) % P.per;
   return ((o - B) % P.per + P.per) % P.per + 1;
 }
+function segsHTML(p) {
+  const P = hp(), k = portionPos(p);
+  return `<div class="segs" aria-label="Ayah ${k} of ${P.per} in this portion">${Array.from({ length: P.per }, (_, i) => `<i class="${i < k - 1 ? "done" : i === k - 1 ? "now" : ""}"></i>`).join("")}</div>`;
+}
+// Each finished portion is a step: a seal with its number, a burst and a distinct buzz.
+function portionMilestone(n, sub) {
+  if (navigator.vibrate) try { navigator.vibrate([18, 50, 18, 50, 70]); } catch (e) {}
+  if (!$reader) return;
+  const r = $reader.getBoundingClientRect(), hue = (n * 47) % 360;
+  sparks(r.left + r.width / 2, r.top + r.height * 0.42, hue);
+  $reader.querySelector(".seal")?.remove();
+  $reader.insertAdjacentHTML("beforeend", `<div class="seal" style="${auroraVars(hue)}"><span class="eyebrow">Portion</span><b>${n}</b><span>${esc(sub)}</span></div>`);
+  setTimeout(() => $reader?.querySelector(".seal")?.remove(), 1700);
+}
+const portionsDone = () => { const P = hp(); return Math.floor(((P.read || 0) - (P.baseDue || 0) % P.per) / P.per); };
 function planAdvance(cur) {
   const P = hp(); if (!P || P.read >= 6236 || ayahIndex(cur) !== planIndex()) return;   // only the next ayah of the plan counts
   const before = hourlyStatus(), a0 = before.behind === 0 ? aheadInfo(before).hours : 0; P.read = (P.read || 0) + 1; save();
   const after = hourlyStatus(), a1 = after.behind === 0 ? aheadInfo(after).hours : 0;
+  if (portionPos(cur) === P.per && !after.complete)
+    setTimeout(() => portionMilestone(portionsDone(), after.behind > 0 ? `${after.hours} more to be current` : a1 ? `current ${aheadLabel(a1)}` : "you're current ✓"), 120);
   if (!after.complete && a1 > a0 && !$reader) {
     const last = aheadInfo(after).last;
     planMsg(`You finished ${extraHours(a1)}`, `Read ahead through ${hrLbl(new Date(last).getHours())} – ${hrLbl((new Date(last).getHours() + 1) % 24)}`);
@@ -2796,7 +2821,7 @@ document.addEventListener("click", e => {
     case "aheadcurrentok": document.querySelectorAll('.scrim[data-act="closesrc"]').forEach(x => x.click()); aheadToCurrent(); if ($reader) drawReader(); else render(); break;
     case "readahead": allowNextHour(); ui.planBanner = null; drawReader(); break;
     case "readmode":
-      if (inPlan()) { leavePlanReader(); ui.aheadUntil = 0; save(); drawReader(); toast("Normal reading", "Your own place in the Quran", 150); }
+      if (inPlan()) { const here = quranPos(); leavePlanReader(); S.quranPos = here; S.quranStar = null; ui.aheadUntil = 0; save(); drawReader(); toast("Normal reading", `From ${ref(here)} · the plan keeps its place`, 150); }
       else if (hp()?.on) { const P = hp(); P.prevPos = S.quranPos || null; P.prevStar = S.quranStar || null; P.inReader = true; ui.aheadUntil = 0; S.quranPos = posOfIndex(planIndex()); save(); drawReader(); toast("Hourly reading", "The plan's next ayah", 150); }
       else openHourlySetup();
       break;
