@@ -314,6 +314,7 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 .modepill.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 .plan-done .ctext { display: flex; flex-direction: column; height: 100%; }
 .hint .ahead-count { color: var(--accent); font-weight: 700; }
+.plan-count b { color: var(--accent); }
 .plan-pill { width: auto !important; padding: 0 10px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .qc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .qc-jump { display: inline-flex; align-items: center; gap: 6px; } .qc-jump .hstar { color: #ffd76a; }
@@ -2106,7 +2107,7 @@ function ayahCardHTML(p, role) {
       ${S.tlQuran ? `<div class="tl" style="font-size:15.5px">${esc(tl)}</div>` : ""}<div class="en" style="font-size:15px" ${BN() && QBN ? 'lang="bn"' : ""}>${esc(en)}</div></div>
     <div class="longhint">Hold to read and scroll · swipe for the next ayah</div>
     <div class="cband"><span class="meta"><b>Ayah ${p.a} of ${m[3]}</b><span>${esc(m[2])} · ${m[4] === "meccan" ? "Makki" : "Madani"}</span></span>
-      <span class="today"><b>${fmt(ayahsReadToday())}</b>read today</span><span class="pbar"><i style="width:${(p.a / m[3] * 100).toFixed(1)}%"></i></span></div></div>`;
+      ${inPlan() && portionPos(p) ? `<span class="today plan-count"><b>${portionPos(p)} / ${hp().per}</b>${portionPos(p) === hp().per ? "last of this portion" : "this portion"}</span>` : `<span class="today"><b>${fmt(ayahsReadToday())}</b>read today</span>`}<span class="pbar"><i style="width:${(p.a / m[3] * 100).toFixed(1)}%"></i></span></div></div>`;
 }
 function drawReader() {
   if (!$reader) return;
@@ -2366,6 +2367,13 @@ function aheadToCurrent() {
 const planBlocked = () => { if (!inPlan() || ui.readAhead || ayahIndex(quranPos()) !== planIndex()) return false; const st = hourlyStatus(); return !st.complete && st.behind === 0; };
 const nextAyah = p => stepAyah(p, 1) || (inPlan() && !hourlyStatus().complete ? { s: 1, a: 1 } : null);
 const planIndex = () => { const P = hp(); return ((P.startIdx - 1 + (P.read || 0)) % 6236) + 1; };
+// Where an ayah falls in its portion of 13: 1…13. Portions follow the plan's schedule (from its start, or from
+// the moment read-ahead was counted as current).
+function portionPos(p) {
+  const P = hp(); if (!P || !P.on) return 0;
+  const o = (ayahIndex(p) - P.startIdx + 6236) % 6236, B = (P.baseDue || 0) % P.per;
+  return ((o - B) % P.per + P.per) % P.per + 1;
+}
 function planAdvance(cur) {
   const P = hp(); if (!P || P.read >= 6236 || ayahIndex(cur) !== planIndex()) return;   // only the next ayah of the plan counts
   const before = hourlyStatus(), a0 = before.behind === 0 ? aheadInfo(before).hours : 0; P.read = (P.read || 0) + 1; save();
@@ -2375,6 +2383,8 @@ function planAdvance(cur) {
     setTimeout(() => toast(`You finished ${extraHours(a1)}`, `Read ahead through ${hrLbl(new Date(last).getHours())} – ${hrLbl((new Date(last).getHours() + 1) % 24)}`, 150, 3000), 300);
   }
   if (after.complete) setTimeout(() => toast("You have read the whole Quran", "Khatm complete · alhamdulillah", 150, 4000), 300);
+  else if (before.behind > 0 && after.behind > 0 && portionPos(cur) === P.per)
+    setTimeout(() => toast(`${P.per} ayahs read ✓`, `${after.hours} more portion${after.hours === 1 ? "" : "s"} to be current`, 150, 2600), 300);
   else if (before.behind > 0 && after.behind === 0) setTimeout(() => toast("You're current", `Next portion at ${hourLabel((upcomingSlots(after, 1)[0] || {}).t || after.nextSlot)}`, 150, 3000), 300);
 }
 const hourLabel = t => new Date(t).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
