@@ -196,6 +196,8 @@ edition, so wording differs in places (e.g. 1:7 "evoked" / "earned").
 
 ## The Quran font
 
-The Arabic font, SIL Scheherazade New (Open Font License, `fonts/OFL.txt`, Arabic subset from @fontsource), ships
+The Arabic font, SIL Scheherazade New (Open Font License, `fonts/OFL.txt`; the full font from google/fonts, cut down
+with `pyftsubset` to the Arabic blocks while keeping all its options), ships
 with the app in `fonts/` and is saved for offline use. The phone's own Arabic font does not know the Mushaf's open
-tanween marks (ࣰ ࣱ ࣲ) and can draw them in the wrong place, e.g. an open kasratan on top of the letter.
+tanween marks (ࣰ ࣱ ࣲ) and can draw them in the wrong place. The font's option cv62 is on, so a kasra together with a
+shadda is drawn below the letter (as in ٱلدِّينِ) rather than under the shadda above it, where it can be taken for a fatha.

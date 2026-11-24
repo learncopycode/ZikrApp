@@ -6,8 +6,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Scheherazade+New:wght@400;700&display=swap">
 <style>
-/* The Quran's font ships with the app (SIL Scheherazade New, OFL), so the Mushaf marks such as the open tanween
-   (ࣰ ࣱ ࣲ) are always drawn in their place, also offline; the phone's own Arabic font does not know them. */
+/* The Quran's font ships with the app (SIL Scheherazade New, OFL; the full font cut down to the Arabic letters and
+   marks, keeping its options), so the Mushaf marks such as the open tanween (ࣰ ࣱ ࣲ) are always drawn in their place,
+   also offline. Its option cv62 is on: a kasra with a shadda is drawn below the letter, so it is not taken for a fatha. */
 @font-face { font-family: "Scheherazade Zikr"; src: url("fonts/scheherazade-new-arabic-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Scheherazade Zikr"; src: url("fonts/scheherazade-new-arabic-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 
@@ -42,7 +43,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 a { color: var(--accent); }
 button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 input, textarea { font: inherit; color: var(--text); }
-.ar { font-family: var(--font-ar); direction: rtl; }
+.ar { font-family: var(--font-ar); direction: rtl; font-feature-settings: "cv62" 1; }   /* kasra with shadda drawn below the letter, so it is not read as a fatha */
 .display { font-family: var(--font-display); font-weight: 400; }
 .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
 .muted { color: var(--muted); }
