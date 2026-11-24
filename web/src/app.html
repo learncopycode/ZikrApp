@@ -1346,6 +1346,7 @@ document.addEventListener("pointerdown", () => {
   try { const a = getAdhanAudio(); a.muted = true; a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; adhanUnlocked = false; }); } catch (e) {}
 }, true);
 function playAdhan(k) {
+  if (k) { const t = prayerTimesFor(0); if (t) { S.adhanPlayed = S.adhanPlayed || {}; S.adhanPlayed[`${t.label.year}-${t.label.month}-${t.label.day}` + k] = 1; save(); } }   // once per prayer
   const a = getAdhanAudio(); a.currentTime = 0; a.muted = false;
   document.querySelector(".adhan-ov")?.remove();
   const n = k ? PT_NAMES.find(x => x[0] === k)[1] : "";
@@ -1358,14 +1359,17 @@ function playAdhan(k) {
   if (navigator.vibrate) try { navigator.vibrate([400, 200, 400]); } catch (e) {}
 }
 function stopAdhan() { if (adhanAudio) { adhanAudio.pause(); adhanAudio.currentTime = 0; } document.querySelector(".adhan-ov")?.remove(); }
+const ADHAN_WINDOW = 30 * 60000;
 function adhanTick() {
   const t = prayerTimesFor(0); if (!t) return;
   const day = `${t.label.year}-${t.label.month}-${t.label.day}`, played = S.adhanPlayed = S.adhanPlayed || {};
   for (const [k] of PT_NAMES) {
     if (k === "sunrise" || !adhanOn(k)) continue;
     if (NATIVE() && S.nativeAlarms) continue;   // the system alarm plays the full adhan
+    // The adhan plays once per prayer: at its time if the app is open, or when the app is opened within the
+    // first 30 minutes after it. Opening the app later in that prayer's time does not play it.
     const late = Date.now() - t.times[k];
-    if (late >= 0 && late < 5 * 60000 && !played[day + k]) { played[day + k] = 1; for (const x in played) if (!x.startsWith(day)) delete played[x]; save(); playAdhan(k); break; }
+    if (late >= 0 && late < ADHAN_WINDOW && !played[day + k]) { played[day + k] = 1; for (const x in played) if (!x.startsWith(day)) delete played[x]; save(); playAdhan(k); break; }
   }
   const cd = document.querySelector('[data-f="countdown"]'), nx = cd && nextPrayer(); if (cd && nx) cd.textContent = `in ${until(nx.at - Date.now())}`;
 }
@@ -1431,7 +1435,7 @@ if (NATIVE()) {
   try {
     nativeLN()?.addListener("localNotificationActionPerformed", ev => {
       const x = ev?.notification?.extra || {};
-      if (x.k && Date.now() - (x.at || 0) < 20 * 60000) playAdhan(x.k);   // opened from the adhan notification: play it in full
+      if (x.k && Date.now() - (x.at || 0) < ADHAN_WINDOW) playAdhan(x.k);   // opened from the adhan notification: play it in full
       if (x.hourly) setTimeout(openPlanReader, 300);                       // opened from the hourly Quran reminder
     });
   } catch (e) {}
