@@ -147,7 +147,11 @@ The reader has an Hourly / Normal switch. In hourly mode the reader stops once y
 with the next portion's time and ayahs); "Read ahead" lets you swipe on, and each hour finished ahead is marked green.
 In the iPhone app a local notification comes at the start of each waking hour that still needs reading (ids 9000+,
 about two days set ahead and set again whenever the app is opened or left), so hours read ahead get no reminder;
-tapping it opens the hour's portion. The web page can't notify while closed; it shows the portion when opened.
+tapping it opens the hour's portion.
+While reading ahead, the reader's bottom line counts the extra hours ("Read ahead: 2 extra hours · 4 of 13 into the
+next"), the top shows +2h, and each finished hour pops up "You finished 2 extra hours". "Count read-ahead as current"
+(on the card and the reader's stop card) moves the schedule up: everything read counts as on time and the next
+hour's portion starts where you stopped. The web page can't notify while closed; it shows the portion when opened.
 The card lists the current hour, this hour's portion and what is left of it, the missed ayahs and hours, where to
 start and the ayah to read up to; a strip of today's waking hours marks each hour read (green) or not read (red); the current hour is outlined, green when current and red when not.
 The reader marks the last ayah of the portion. The waking hours button on the card opens the settings.

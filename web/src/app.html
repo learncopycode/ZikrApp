@@ -299,6 +299,7 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 .modepill { height: 34px; padding: 0 12px; border-radius: 17px; border: 1px solid var(--line); background: var(--card); color: inherit; font: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .modepill.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 .plan-done .ctext { display: flex; flex-direction: column; height: 100%; }
+.hint .ahead-count { color: var(--accent); font-weight: 700; }
 .plan-pill { width: auto !important; padding: 0 10px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .qc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .qc-jump { display: inline-flex; align-items: center; gap: 6px; } .qc-jump .hstar { color: #ffd76a; }
@@ -2031,10 +2032,10 @@ function drawReader() {
       <div class="grow"><button class="surah-pick" data-act="surahs">${esc(QURAN_META[p.s - 1][1])} <span class="muted">· ${p.s}</span> ▾</button></div>
       <button class="modepill ${plan ? "on" : ""}" data-act="readmode" aria-label="Switch between hourly and normal reading">${plan ? "Hourly" : "Normal"}</button>
       <button class="icon-btn tlbtn ${S.tlQuran ? "on" : ""}" data-act="tlquran" aria-label="${S.tlQuran ? "Hide" : "Show"} transliteration" title="Transliteration">Aa</button>
-      ${plan ? `<span class="icon-btn quran-pct plan-pill" title="Hourly portion">${plan.behind > 0 ? `${plan.behind} left` : "✓"}</span>` : `<span class="icon-btn quran-pct" title="Through the Quran">${Math.floor(ayahIndex(p) / 6236 * 100)}%</span>`}
+      ${plan ? `<span class="icon-btn quran-pct plan-pill" title="Hourly portion">${plan.behind > 0 ? `${plan.behind} left` : aheadInfo(plan).hours ? `+${aheadInfo(plan).hours}h` : "✓"}</span>` : `<span class="icon-btn quran-pct" title="Through the Quran">${Math.floor(ayahIndex(p) / 6236 * 100)}%</span>`}
     </div>
     <div class="deck" id="rdeck">${blocked ? currentCardHTML(plan) : `${next ? ayahCardHTML(next, "back") : ""}${ayahCardHTML(p, "top")}`}</div>
-    <div class="hint">${plan ? (plan.complete ? "Khatm complete · alhamdulillah" : plan.behind > 0 ? `Read up to ${plan.end.s}:${plan.end.a} · ${plan.behind} ayah${plan.behind === 1 ? "" : "s"} to be current` : blocked ? "Swipe down to read the last ayah again" : "Reading ahead · each finished hour is marked") : "Swipe for the next ayah · triple-tap for tafsir"}</div>`;
+    <div class="hint">${plan ? (plan.complete ? "Khatm complete · alhamdulillah" : plan.behind > 0 ? `Read up to ${plan.end.s}:${plan.end.a} · ${plan.behind} ayah${plan.behind === 1 ? "" : "s"} to be current` : blocked ? "Swipe down to read the last ayah again" : (() => { const a = aheadInfo(plan); return `<b class="ahead-count">Read ahead: ${extraHours(a.hours)}</b> · ${a.into} of ${hp().per} into the next`; })()) : "Swipe for the next ayah · triple-tap for tafsir"}</div>`;
   rSetBack(0); bindReader();
   $reader.querySelectorAll(".card").forEach(fitCard);
 }
@@ -2046,6 +2047,7 @@ function currentCardHTML(st) {
       ${ah ? `<span class="muted">Read ahead through ${hrLbl(new Date(ah).getHours())} – ${hrLbl((new Date(ah).getHours() + 1) % 24)}</span>` : ""}
       ${up ? `<span>Next portion at <b>${hourLabel(up.t)}</b>${new Date(up.t).toDateString() !== new Date().toDateString() ? " " + new Date(up.t).toLocaleDateString(undefined, { weekday: "long" }) : ""}</span><span class="muted">${esc(ref(up.from))} → ${esc(ref(up.to))}</span>` : ""}
       <div class="btn-row" style="justify-content:center;margin-top:8px"><button class="btn small" data-act="readahead">Read ahead</button><button class="btn ghost small" data-act="readmode">Normal reading</button></div>
+      ${aheadInfo(st).ayahs > 0 ? `<button class="btn ghost small" data-act="aheadcurrent">Count read-ahead as current</button>` : ""}
       <button class="btn ghost small" data-act="closereader">Close</button></div></div>`;
 }
 function rSetBack(progress, ms) {
@@ -2254,14 +2256,39 @@ function aheadThrough(st) {
   for (let i = 0; i < 24 * 30; i++, t = hourFloor(t + 3700000)) { if (!awakeHour(new Date(t).getHours(), P)) continue; if (hourlyStatus(t + 60000).due <= st.read) last = t; else break; }
   return last;
 }
+// Read ahead in whole hours: how many upcoming waking hours are fully read, and how far into the next one.
+function aheadInfo(st) {
+  const P = hp(); let hours = 0, last = null, covered = st.due, t = hourFloor(Date.now() + 3700000);
+  if (st.read <= st.due) return { hours: 0, last: null, into: 0, ayahs: 0 };
+  for (let i = 0; i < 24 * 30; i++, t = hourFloor(t + 3700000)) {
+    if (!awakeHour(new Date(t).getHours(), P)) continue;
+    const d = hourlyStatus(t + 60000).due; if (d > st.read) break;
+    hours++; last = t; covered = d; if (d >= 6236) break;
+  }
+  return { hours, last, into: st.read - covered, ayahs: st.read - st.due };
+}
+const extraHours = n => `${n} extra hour${n === 1 ? "" : "s"}`;
+// Count everything read ahead as on time: the plan starts afresh from the next hour, with the next portion
+// beginning where you stopped. (Read ayahs stay read; only the schedule moves up.)
+function aheadToCurrent() {
+  const P = hp(), st = hourlyStatus(); if (!P || st.read <= st.due) return;
+  Object.assign(P, { baseDue: st.read, countFrom: hourFloor(Date.now() + 3700000) });
+  save(); scheduleHourlyReminders();
+  const up = upcomingSlots(hourlyStatus(), 1)[0];
+  toast("Counted as current", up ? `Next portion at ${hourLabel(up.t)}: ${ref(up.from)} to ${ref(up.to)}` : "Next portion next hour", 150, 3600);
+}
 // In hourly mode, once you are current the reader stops, unless you choose to read ahead.
 const planBlocked = () => { if (!inPlan() || ui.readAhead || ayahIndex(quranPos()) !== planIndex()) return false; const st = hourlyStatus(); return !st.complete && st.behind === 0; };
 const nextAyah = p => stepAyah(p, 1) || (inPlan() && !hourlyStatus().complete ? { s: 1, a: 1 } : null);
 const planIndex = () => { const P = hp(); return ((P.startIdx - 1 + (P.read || 0)) % 6236) + 1; };
 function planAdvance(cur) {
   const P = hp(); if (!P || P.read >= 6236 || ayahIndex(cur) !== planIndex()) return;   // only the next ayah of the plan counts
-  const before = hourlyStatus(); P.read = (P.read || 0) + 1; save();
-  const after = hourlyStatus();
+  const before = hourlyStatus(), a0 = before.behind === 0 ? aheadInfo(before).hours : 0; P.read = (P.read || 0) + 1; save();
+  const after = hourlyStatus(), a1 = after.behind === 0 ? aheadInfo(after).hours : 0;
+  if (!after.complete && a1 > a0) {
+    const last = aheadInfo(after).last;
+    setTimeout(() => toast(`You finished ${extraHours(a1)}`, `Read ahead through ${hrLbl(new Date(last).getHours())} – ${hrLbl((new Date(last).getHours() + 1) % 24)}`, 150, 3000), 300);
+  }
   if (after.complete) setTimeout(() => toast("You have read the whole Quran", "Khatm complete · alhamdulillah", 150, 4000), 300);
   else if (before.behind > 0 && after.behind === 0) setTimeout(() => toast("You're current", `Next portion at ${hourLabel((upcomingSlots(after, 1)[0] || {}).t || after.nextSlot)}`, 150, 3000), 300);
 }
@@ -2312,7 +2339,10 @@ function hourlyCardHTML() {
       + (st.behind > 0 ? line("Start at", esc(ref(st.pos))) + line("Read up to", esc(ref(st.end))) : (() => { const up = upcomingSlots(st, 1)[0], ah = aheadThrough(st);
         return (ah ? line("Read ahead through", `${hrLbl(new Date(ah).getHours())} – ${hrLbl((new Date(ah).getHours() + 1) % 24)}${new Date(ah).toDateString() !== new Date().toDateString() ? " " + new Date(ah).toLocaleDateString(undefined, { weekday: "short" }) : ""}`) : "")
           + line("Next ayah", esc(ref(st.pos))) + (up ? line("Next portion", `${hourLabel(up.t)}${new Date(up.t).toDateString() !== new Date().toDateString() ? " " + new Date(up.t).toLocaleDateString(undefined, { weekday: "short" }) : ""}`) : ""); })());
-    btn = st.behind > 0 ? `<button class="btn small" data-act="hourly">Read now</button>` : `<button class="btn ghost small" data-act="hourlyahead">Read ahead</button>`;
+    const ah = st.behind > 0 ? null : aheadInfo(st);
+    btn = st.behind > 0 ? `<button class="btn small" data-act="hourly">Read now</button>` : `<button class="btn ghost small" data-act="hourlyahead">Read ahead</button>`
+      + (ah && ah.ayahs > 0 ? `<button class="btn ghost small" data-act="aheadcurrent">Count read-ahead as current</button>` : "");
+    if (ah && ah.ayahs > 0) rows += line("Read ahead", `${extraHours(ah.hours)}${ah.into ? ` + ${ah.into} ayah${ah.into === 1 ? "" : "s"}` : ""}`);
   }
   return `<section class="today-z hourly-card ${st.behind > 0 && !st.complete ? "due" : ""}" style="${auroraVars(hue)}">${aurora()}
     <div class="row1"><span><span class="eyebrow">Hourly Quran · day ${day}</span><br><b>${title}</b></span><button class="icon-btn" data-act="hourlysetup" aria-label="Hourly Quran settings">${ICONS.more}</button></div>
@@ -2625,6 +2655,15 @@ document.addEventListener("click", e => {
     case "reader": if (inPlan()) { leavePlanReader(); if ($reader) { $reader.remove(); $reader = null; } } openReader(); break;
     case "hourly": openPlanReader(false); break;
     case "hourlyahead": openPlanReader(true); break;
+    case "aheadcurrent": {
+      const st = hourlyStatus(), a = aheadInfo(st), up = upcomingSlots(st, 1)[0];
+      $layer.insertAdjacentHTML("beforeend", `<div class="scrim" data-act="closesrc" style="z-index:64"></div><div class="sheet-src" style="z-index:65" role="dialog" aria-label="Count read-ahead as current"><div class="in">
+        <span class="eyebrow">Hourly Quran</span><b class="display" style="font-size:19px">Count your read-ahead as current?</b>
+        <p>You have read ${a.ayahs} ayah${a.ayahs === 1 ? "" : "s"} ahead (${extraHours(a.hours)}${a.into ? ` and ${a.into} more` : ""}). The plan will start afresh from the next hour: its portion will be the next ${hp().per} ayahs from where you stopped, ${esc(ref(st.pos))}, instead of waiting until ${up ? hourLabel(up.t) : "later"}.</p>
+        <p class="muted" style="margin:0">This moves your whole schedule up, so you finish the Quran sooner.</p>
+        <div class="btn-row" style="justify-content:flex-start"><button class="btn small" data-act="aheadcurrentok">Count it as current</button><button class="btn ghost small" data-act="closesrc">Cancel</button></div></div></div>`);
+      break; }
+    case "aheadcurrentok": document.querySelectorAll('.scrim[data-act="closesrc"]').forEach(x => x.click()); aheadToCurrent(); if ($reader) drawReader(); else render(); break;
     case "readahead": ui.readAhead = true; drawReader(); toast("Reading ahead", "Each hour you finish is marked; its reminder is skipped", 150, 2600); break;
     case "readmode":
       if (inPlan()) { leavePlanReader(); ui.readAhead = false; save(); drawReader(); toast("Normal reading", "Your own place in the Quran", 150); }
