@@ -1,0 +1,18 @@
+{
+  "appId": "com.learncopycode.zikr",
+  "appName": "Zikr",
+  "webDir": "www",
+  "backgroundColor": "#fffdf9",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#fffdf9"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "presentationOptions": [
+        "banner",
+        "list"
+      ]
+    }
+  }
+}
