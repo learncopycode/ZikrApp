@@ -176,3 +176,15 @@ The reader marks the last ayah of the portion. The waking hours button on the ca
   (listed in the script) and the Assamese letter ৰ, typed by mistake for র, is normalised.
 - No AI translation is used. Where no published Bangla exists (Sahih Muslim 2700, 2728, 2733, and your own zikrs)
   the English stays, marked "বাংলা অনুবাদ পাওয়া যায়নি".
+
+## Checking the Quran text
+
+`check_quran.py quran.js <dir>` compares every ayah with QuranEnc's official text
+(`https://quranenc.com/api/v1/translation/sura/english_saheeh/<sura>`, which carries the King Fahd Complex Arabic).
+Checked on 24 Nov 2026: the Arabic matched in all 6,236 ayahs letter for letter and mark for mark, apart from
+(a) the same signs encoded two ways (QuranEnc writes open tanween with older stand-in marks; the app uses the
+dedicated Unicode signs its font draws), (b) the order marks are stored in, and (c) spaces, none of which changes the
+text, and two real defects in quran-json, now corrected from QuranEnc (`quran_fixes.json`, applied by
+`build_quran.py`): 2:72 (a space inside فَٱدَّٰرَٰءۡتُمۡ) and 11:41 (the imala sign of مَجۡر۪ىٰهَا).
+The English is Saheeh International as published on Tanzil (the earlier edition); QuranEnc carries the later revised
+edition, so wording differs in places (e.g. 1:7 "evoked" / "earned").

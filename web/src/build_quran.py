@@ -19,6 +19,13 @@ for n in range(1, 115):
     meta.append([d["name"], d["transliteration"], d["translation"], d["total_verses"], d["type"]])
     text.append([[v["text"].translate(FIX), v["translation"], translit[f"{n}:{v['id']}"]] for v in d["verses"]])
 assert sum(m[3] for m in meta) == 6236
+# Two ayahs where quran-json's Arabic differs from QuranEnc's official text (found by check_quran.py):
+# 2:72 had a space inside فَٱدَّٰرَٰءۡتُمۡ and its hamza written differently; 11:41 had the imala sign of مَجۡر۪ىٰهَا as
+# another mark. They are taken from QuranEnc (quran_fixes.json), with its open tanween in the app's Unicode signs.
+fx = os.path.join(os.path.dirname(os.path.abspath(__file__)), "quran_fixes.json")
+if os.path.exists(fx):
+    for k, t in json.load(open(fx, encoding="utf8")).items():
+        su, ay = map(int, k.split(":")); text[su - 1][ay - 1][0] = t
 js = ("/* The Quran: Uthmani text (QuranEnc, King Fahd Complex), Saheeh International, Quran.com transliteration. Generated. */\n"
       f"const QURAN_META = {json.dumps(meta, ensure_ascii=False, separators=(',', ':'))};\n"
       f"const QURAN_TEXT = {json.dumps(text, ensure_ascii=False, separators=(',', ':'))};\n")
