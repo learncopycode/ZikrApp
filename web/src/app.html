@@ -315,6 +315,7 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 .plan-done .ctext { display: flex; flex-direction: column; height: 100%; }
 .hint .ahead-count { color: var(--accent); font-weight: 700; }
 .plan-count b { color: var(--accent); }
+.khatm-total { color: #3f9a6c; font-weight: 700; }
 .planbanner { display: flex; flex-direction: column; gap: 1px; margin: 0 4px 8px; padding: 9px 14px; border-radius: 14px; background: color-mix(in srgb, #5fb98a 16%, var(--card)); border: 1px solid color-mix(in srgb, #5fb98a 45%, var(--line)); font-size: 13.5px; }
 .planbanner b { color: #3f9a6c; font-size: 14px; } .planbanner span { color: var(--muted); }
 .plan-pill { width: auto !important; padding: 0 10px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
@@ -1212,7 +1213,7 @@ function statsHTML() {
     <div class="seg" role="group" aria-label="Period">${PERIODS.map(([id, s]) => `<button data-act="period" data-p="${id}" aria-pressed="${id === p}">${s}</button>`).join("")}</div>
     ${panelHTML(S.days, all, "All zikrs")}
     <div class="five" style="--c:var(--accent)">${PERIODS.map(([id, s]) => `<span class="${id === p ? "sel" : ""}"><small>${s}</small><b>${short(totalFor(S.days, all, id))}</b></span>`).join("")}</div>
-    <div class="note">Streak: ${streak()} day${streak() === 1 ? "" : "s"} in a row.</div>
+    <div class="note">Streak: ${streak()} day${streak() === 1 ? "" : "s"} in a row.${khatmCount() ? ` · Quran completed ${khatmCount()} time${khatmCount() === 1 ? "" : "s"} in the Hourly plan.` : ""}</div>
     <h2 class="sec">Each zikr <small>tap for a chart</small></h2>`;
   if (!items.length) h += `<div class="empty">Add a zikr to see its totals here.</div>`;
   h += items.map(it => {
@@ -2357,6 +2358,8 @@ function aheadInfo(st) {
   }
   return { hours, last, into: st.read - covered, ayahs: st.read - st.due };
 }
+const khatmCount = () => (S.khatms || []).length;
+const khatmLabel = () => { const n = khatmCount(); return n ? `Quran completed ${n} time${n === 1 ? "" : "s"}` : "No completed Quran yet"; };
 const extraHours = n => `${n} extra hour${n === 1 ? "" : "s"}`;
 // Count everything read ahead as on time: the plan starts afresh from the next hour, with the next portion
 // beginning where you stopped. (Read ayahs stay read; only the schedule moves up.)
@@ -2386,7 +2389,11 @@ function planAdvance(cur) {
     const last = aheadInfo(after).last;
     planMsg(`You finished ${extraHours(a1)}`, `Read ahead through ${hrLbl(new Date(last).getHours())} – ${hrLbl((new Date(last).getHours() + 1) % 24)}`);
   }
-  if (after.complete) setTimeout(() => toast("You have read the whole Quran", "Khatm complete · alhamdulillah", 150, 4000), 300);
+  if (after.complete && !P.khatmCounted) {
+    // A whole Quran read through in the plan: counted once, in a total that stays when the plan is stopped or restarted.
+    P.khatmCounted = true; S.khatms = (S.khatms || []).concat({ date: dayKey(), days: Math.floor((Date.now() - P.startAt) / 86400000) + 1 }); save();
+    planMsg("You have read the whole Quran", `Khatm complete · alhamdulillah · ${khatmLabel()}`);
+  }
   else if (before.behind > 0 && after.behind > 0 && portionPos(cur) === P.per)
     planMsg(`${P.per} ayahs read`, `${after.hours} more portion${after.hours === 1 ? "" : "s"} to be current`);
   else if (before.behind > 0 && after.behind === 0) planMsg("You're current", `Next portion at ${hourLabel((upcomingSlots(after, 1)[0] || {}).t || after.nextSlot)}`);
@@ -2435,7 +2442,8 @@ function hourlyCardHTML() {
   const P = hp();
   if (!P || !P.on) return `<section class="today-z hourly-card">
       <div class="row1"><span><span class="eyebrow">Hourly Quran</span><br><b>${HOURLY_DEF.per} ayahs every waking hour</b></span><button class="btn small" data-act="hourlysetup">Start</button></div>
-      <span class="qmeta">The whole Quran in about 30 days. Missed hours add up until you catch up. You choose your waking hours.</span></section>`;
+      <span class="qmeta">The whole Quran in about 30 days. Missed hours add up until you catch up. You choose your waking hours.</span>
+      ${khatmCount() ? `<span class="qmeta khatm-total">✓ ${khatmLabel()}</span>` : ""}</section>`;
   const st = hourlyStatus(), pct = st.read / 6236 * 100, hue = (st.pos.s * 37 + st.pos.a * 3) % 360;
   const day = Math.floor((Date.now() - P.startAt) / 86400000) + 1, perDay = P.per * wakingHours(P), left = 6236 - st.read;
   const ends = new Date(Date.now() + Math.ceil(left / perDay) * 86400000).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -2461,6 +2469,7 @@ function hourlyCardHTML() {
     ${st.complete ? "" : hourStripHTML(P, st)}
     <span class="prog"><i style="width:${pct.toFixed(2)}%"></i></span>
     <span class="qmeta">${fmt(st.read)} of 6,236 ayahs · ${pct.toFixed(pct < 10 ? 1 : 0)}%${st.complete ? "" : ` · on pace to finish ${ends}`}</span>
+    ${khatmCount() ? `<span class="qmeta khatm-total">✓ ${khatmLabel()}</span>` : ""}
     <div class="qc-actions">${btn}<button class="btn ghost small" data-act="hourlysetup">Waking hours ${hrLbl(P.from)}–${hrLbl(P.to)}</button></div></section>`;
 }
 function openHourlySetup() {
@@ -2478,7 +2487,7 @@ function openHourlySetup() {
     <b id="hs-sum"></b>
     <span class="note">${NATIVE() ? "A reminder comes at the start of every waking hour, even when the app is closed." : "Reminders at the start of every hour come in the iPhone app. Here, the hour's portion shows when you open the app."}</span>
     <div class="btn-row" style="justify-content:flex-start"><button class="btn small" data-act="hourlysave">${on ? "Save" : "Start the plan"}</button>
-      ${on ? `<button class="btn ghost small" data-act="hourlystop" style="color:#d9796b">Stop the plan</button>` : `<button class="btn ghost small" data-act="closesrc">Not now</button>`}</div></div></div>`);
+      ${on ? `<button class="btn ghost small" data-act="hourlystop" style="color:#d9796b">Stop and reset the plan</button>` : `<button class="btn ghost small" data-act="closesrc">Not now</button>`}</div></div></div>`);
   const sum = () => {
     const per = +document.getElementById("hs-per").textContent, P2 = { from: +document.getElementById("hs-from").value, to: +document.getElementById("hs-to").value };
     const wh = wakingHours(P2), days = wh ? 6236 / (per * wh) : Infinity;
@@ -2784,7 +2793,12 @@ document.addEventListener("click", e => {
     case "hourlysetup": openHourlySetup(); break;
     case "hsper": { const el = document.getElementById("hs-per"); el.textContent = Math.max(1, Math.min(100, +el.textContent + +b.dataset.d)); document.getElementById("hs-from").onchange(); break; }
     case "hourlysave": saveHourly(); break;
-    case "hourlystop": if (inPlan()) closeReader(); S.hourly.on = false; save(); document.querySelector('.scrim[data-act="closesrc"]')?.click(); render(); scheduleHourlyReminders(); toast("Hourly Quran stopped", "Your free reading place is unchanged", 150); break;
+    case "hourlystop": {
+      if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = `Tap again: this plan's ${fmt(hourlyStatus().read)} ayahs go back to 0`; break; }
+      if (inPlan()) closeReader();
+      const P = hp(); S.hourly = { on: false, per: P.per, from: P.from, to: P.to };   // the count starts again; the completed total stays
+      save(); document.querySelector('.scrim[data-act="closesrc"]')?.click(); render(); scheduleHourlyReminders();
+      toast("Hourly Quran stopped", khatmCount() ? `Plan reset · ${khatmLabel()}` : "Plan reset · your normal reading place is unchanged", 150); break; }
     case "hourlyagain": { const P = hp(); S.hourly = { on: true, per: P.per, from: P.from, to: P.to, startIdx: 1, startAt: hourFloor(Date.now()), countFrom: hourFloor(Date.now()), baseDue: 0, read: 0 }; save(); render(); scheduleHourlyReminders(); break; }
     case "closereader": closeReader(); break;
     case "surahs": openSurahs(); break;
