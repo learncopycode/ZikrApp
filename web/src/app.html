@@ -748,6 +748,19 @@ if (S.libV === 2) {
   S.libV = 3; save();
 }
 delete S.aiBn;   // earlier versions kept AI translations; only published Bangla is shown now
+/* Default language: Bangla in Bangladesh, English everywhere else, from the detected place (before that, the
+   phone's time zone). Once you switch language yourself, your choice is kept. */
+function autoLang(country) {
+  if (S.langChosen) return;
+  const want = (country ? country === "Bangladesh" : deviceTz() === "Asia/Dhaka") ? "bn" : "en";
+  if (S.lang === want) return;
+  S.lang = want; save(); document.documentElement.lang = want;
+  if (typeof rerenderKeepScroll === "function" && !document.querySelector(".sheet, .sheet-src")) rerenderKeepScroll();
+  if (typeof drawCounter === "function" && $counter) drawCounter();
+  if (typeof drawReader === "function" && $reader) drawReader();
+}
+if (!S.langChosen) { let tz0 = ""; try { tz0 = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+  S.lang = ((S.loc && S.loc.country) ? S.loc.country === "Bangladesh" : tz0 === "Asia/Dhaka") ? "bn" : "en"; }
 // Library zikrs always show the published text.
 for (const it of S.items) { const d = BY_ID[it.libraryID]; if (d) Object.assign(it, { title: d.title, arabic: d.arabic, translit: d.translit, translation: d.meaning, source: d.source }); }
 const sortedItems = () => S.items.slice().sort((a, b) => a.createdAt - b.createdAt);
@@ -1366,6 +1379,7 @@ function setPlace(p, quiet) {
   const wasReady = placeReady;
   if (!old || old.country !== p.country) { delete S.ptMethod; delete S.ptMadhab; }   // a new country gets its usual method
   S.loc = p; save(); closePlacePicker();
+  autoLang(p.country);
   if (wasReady && changed) markPassedPrayers();
   if (!wasReady) { placeReady = true; setTimeout(adhanTick, 0); }
   if (ui.tab === "times" || ui.tab === "home") rerenderKeepScroll();
@@ -2662,8 +2676,8 @@ document.addEventListener("click", e => {
     case "tab": if ($counter) closeCounter(); document.querySelectorAll(".overlay").forEach(closeOverlay); ui.tab = b.dataset.tab; ui.sub = null; render(true); $screen.scrollTop = 0; break;
     case "sub": ui.tab = "discover"; ui.sub = b.dataset.sub; render(true); $screen.scrollTop = 0; break;
     case "theme": S.theme = isLight() ? "dark" : "light"; save(); applyTheme(); rerenderKeepScroll(); break;
-    case "lang": S.lang = BN() ? "en" : "bn"; save(); document.documentElement.lang = BN() ? "bn" : "en"; rerenderKeepScroll();
-      toast(BN() ? "বাংলা অনুবাদ" : "English translations", BN() ? "Hisn al-Muslim duas have no Bangla edition yet, so they stay in English" : "Saheeh International · sunnah.com"); break;
+    case "lang": S.lang = BN() ? "en" : "bn"; S.langChosen = true; save(); document.documentElement.lang = BN() ? "bn" : "en"; rerenderKeepScroll();
+      toast(BN() ? "বাংলা অনুবাদ" : "English translations", BN() ? "কুরআন, হিসনুল মুসলিম ও হাদীসের প্রকাশিত বাংলা অনুবাদ" : "Saheeh International · sunnah.com"); break;
     case "open": openCounter(id); break;
     case "lib": openCounter(findOrCreate(BY_ID[id]).id); break;
     case "quickadd": {
