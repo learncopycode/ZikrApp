@@ -155,3 +155,17 @@ hour's portion starts where you stopped. The web page can't notify while closed;
 The card lists the current hour, this hour's portion and what is left of it, the missed ayahs and hours, where to
 start and the ayah to read up to; a strip of today's waking hours marks each hour read (green) or not read (red); the current hour is outlined, green when current and red when not.
 The reader marks the last ayah of the portion. The waking hours button on the card opens the settings.
+
+## Bangla for Hisn al-Muslim
+
+- `hisn_bn_app.json` (by `build_hisn_bn.py`): the Bangla edition of Hisnul Muslim published by IslamHouse,
+  translated and edited by Dr. Abu Bakr Muhammad Zakaria
+  (`https://d1.islamhouse.com/data/bn/ih_books/single2/bn_Hisnul_Elmuslim.doc`, converted with
+  `antiword -m UTF-8.txt`). The book numbers its duas exactly like the Arabic edition, so each of the 267 entries
+  is matched by number (the Arabic agrees wherever both have it). The single phrases split out of longer duas
+  (Subhanallah, Alhamdulillah, …) take the matching sentence of the book's Bangla; the dhikr quoted inside
+  narrations take the Bangla the book gives right after each quoted Arabic dhikr. Embedded gzipped.
+- Where no published Bangla exists (the meanings of the 99 Names, the Bukhari/Muslim hadiths not matched to a
+  Bangla edition, your own zikrs), Bangla mode on claude.ai shows an AI translation, marked
+  "AI অনুবাদ · ভুল থাকতে পারে", made once and kept on the device. Without AI (the installed app) the English stays,
+  marked "বাংলা অনুবাদ পাওয়া যায়নি".

@@ -25,6 +25,7 @@ parts = {
     "/*ADHAN_LIB*/": r("adhan.umd.min.js").replace("</", "<\\/").replace("//# sourceMappingURL=adhan.umd.min.js.map", ""),
     "/*CITIES_TZ*/": dump(one_per_tz(j("cities.json"))),
     "/*CITIES_GZ*/": json.dumps(gz(open(os.path.join(HERE, "cities.json"), "rb").read())),
+    "/*HISN_BN_GZ*/": json.dumps(gz(open(os.path.join(HERE, "hisn_bn_app.json"), "rb").read())),
     "/*HADITH_LIB_GZ*/": json.dumps(gz(open(os.path.join(HERE, "hadith_lib.json"), "rb").read())),
     "/*ADHAN_MP3*/": base64.b64encode(open(os.path.join(HERE, "adhan.mp3"), "rb").read()).decode(),
 }

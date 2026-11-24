@@ -304,6 +304,7 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 .hourly-setup .hs-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
 .hourly-setup select { font: inherit; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: inherit; max-width: 60%; }
 .hourly-setup .stepper { display: flex; align-items: center; gap: 10px; } .hourly-setup .stepper b { min-width: 28px; text-align: center; font-size: 18px; }
+.ainote { font-size: 11.5px; font-weight: 600; color: #c07a2c; margin-top: 2px; }
 .hlines { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 4px; }
 .hlines .hl { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
 .hlines .hl > span { color: var(--muted, inherit); opacity: .8; } .hlines .hl b { text-align: right; font-weight: 600; }
@@ -556,6 +557,10 @@ async function gunzipB64(b64) {
 }
 const SURAH_OFF = (() => { const o = []; let t = 0; for (const m of QURAN_META) { o.push(t); t += m[3]; } return o; })();
 let QBN = null;
+/* Bangla for Hisn al-Muslim: the IslamHouse Bangla edition of Hisnul Muslim, matched to each entry by the book's
+   own numbering (gzipped; see build_hisn_bn). */
+const HISN_BN_GZ = /*HISN_BN_GZ*/;
+let HBN = null;
 const qbn = (s, a) => QBN ? QBN[SURAH_OFF[s - 1] + a - 1] : null;
 const ayahMeaning = (s, a) => (BN() && qbn(s, a)) || QURAN_TEXT[s - 1][a - 1][1];
 function rangeMeaning(key) {
@@ -646,12 +651,40 @@ const BY_ID = Object.fromEntries(ALL.map(d => [d.id, d]));
 // The meaning shown for a library entry in the current language (Quran entries have a Bangla edition).
 function meaningOf(d) {
   if (!d) return "";
-  if (BN() && d.kind === "he" && d.bn && !d.dua_ar) return d.bn;
+  if (BN() && d.kind === "he" && d.bn) return d.bn;   // the whole hadith in Bangla, as published (its dua is inside)
   if (BN() && d.kind === "sahih" && d.bn) return d.bn;
+  if (BN() && HBN && !d.qkeys && HBN[d.id]) return HBN[d.id];
   if (BN() && QBN && d.qkeys) return d.qkeys.map(k => (startsSurah(k) ? qbn(1, 1) + "\n" : "") + rangeMeaning(k)).join("\n\n");
   return d.meaning;
 }
-const itemMeaning = it => { const d = BY_ID[it.libraryID]; return d ? meaningOf(d) : it.translation; };
+/* Where no published Bangla exists (e.g. the 99 Names' meanings, some hadiths, your own zikrs), Bangla mode shows
+   an AI translation on claude.ai, marked as such; without AI the English stays. Published Bangla always comes first. */
+const hasPubBn = d => !!d && (d.qkeys ? !!QBN : d.kind === "he" || d.kind === "sahih" ? !!d.bn : !!(HBN && HBN[d.id]));
+const aiKey = it => it.libraryID ? it.libraryID : "u:" + it.id + ":" + (it.translation || "").length;
+const needsAiBn = it => BN() && !hasPubBn(BY_ID[it.libraryID]) && !!(BY_ID[it.libraryID]?.meaning || it.translation) && !(it.libraryID && (!HBN || !QBN));
+const aiBnOf = it => needsAiBn(it) ? (S.aiBn || {})[aiKey(it)] || null : null;
+const itemMeaning = it => { const d = BY_ID[it.libraryID]; return aiBnOf(it) || (d ? meaningOf(d) : it.translation); };
+const aiBnBusy = {};
+async function queueAiBn(it) {
+  const k = aiKey(it); if (!needsAiBn(it) || (S.aiBn || {})[k] || aiBnBusy[k]) return;
+  aiBnBusy[k] = "working";
+  const smp = await sampler(); if (!smp) { aiBnBusy[k] = "none"; if ($counter) drawCounter(); return; }
+  const d = BY_ID[it.libraryID], en = d ? d.meaning : it.translation;
+  const what = d?.kind === "name" ? `the meaning of one of the Names of Allah (${d.translit})` : d?.kind === "sahih" || d?.kind === "he" ? "a hadith" : "an Islamic dua or dhikr";
+  try {
+    const r = await smp(`Translate this English rendering of ${what} into Bangla, in the wording Bangladeshi Muslims use (আল্লাহ, দো‘আ, রাসূলুল্লাহ সাল্লাল্লাহু আলাইহি ওয়াসাল্লাম). Keep the meaning exact; do not add or explain anything. Reply with the Bangla translation only.\n\n${en}`, { modelTier: "quick" });
+    const t = (r && r.text || "").trim(); if (t) { S.aiBn = S.aiBn || {}; S.aiBn[k] = t; save(); }
+    aiBnBusy[k] = t ? "done" : "none";
+  } catch (e) { aiBnBusy[k] = "none"; }
+  if ($counter) drawCounter();
+}
+function bnNoteHTML(it) {
+  if (!needsAiBn(it)) return "";
+  if (aiBnOf(it)) return `<div class="ainote">AI অনুবাদ · ভুল থাকতে পারে</div>`;
+  if (aiBnBusy[aiKey(it)] === "none") return `<div class="ainote">বাংলা অনুবাদ পাওয়া যায়নি · ইংরেজি দেখানো হলো</div>`;
+  setTimeout(() => queueAiBn(it), 0);
+  return `<div class="ainote">বাংলা অনুবাদ হচ্ছে (AI)…</div>`;
+}
 const chTitle = c => (BN() && HISN_BN_TITLES[Math.round(c.ch ?? c)]) || c.title || "";
 // Older versions had their own library; each entry maps to the same words in Hisn al-Muslim or the Quran.
 const OLD_IDS = { subhanallah: "t-subhanallah", alhamdulillah: "t-alhamdulillah", allahuakbar: "t-allahuakbar", astaghfirullah: "t-astaghfirullah",
@@ -960,6 +993,10 @@ async function keepAwake(on) { try { if (on && navigator.wakeLock) wakeLock = aw
 
 if (typeof DecompressionStream !== "undefined") gunzipB64(CITIES_GZ).then(t => { CITIES = JSON.parse(t); }).catch(() => {});
 if (typeof DecompressionStream !== "undefined") gunzipB64(HADITH_LIB_GZ).then(t => loadHadithLib(JSON.parse(t))).catch(() => {});
+if (typeof DecompressionStream !== "undefined") gunzipB64(HISN_BN_GZ).then(t => {
+  HBN = JSON.parse(t).bn;
+  if (BN()) { if (!$counter && !$reader && !document.querySelector(".sheet, .sheet-src")) rerenderKeepScroll?.(); if (typeof drawCounter === "function" && $counter) drawCounter(); }
+}).catch(() => {});
 if (typeof DecompressionStream !== "undefined") gunzipB64(QURAN_BN_GZ).then(t => {
   QBN = JSON.parse(t);
   if (BN()) { rerenderKeepScroll?.(); if (typeof drawReader === "function" && $reader) drawReader(); if (typeof drawCounter === "function" && $counter) drawCounter(); }
@@ -1751,7 +1788,7 @@ function cardHTML(it, role, preview = 0, huePreview = preview) {
     <div class="ctext">
       ${it.arabic ? `<div class="arb ar" style="font-size:${arSize}px">${esc(it.arabic)}</div>` : `<div class="arb display" style="font-size:36px">${esc(it.title)}</div>`}
       ${it.translit && S.tlZikr !== false ? `<div class="tl" style="font-size:16px">${esc(it.translit)}</div>` : ""}
-      ${itemMeaning(it) ? `<div class="en" style="font-size:15px">${esc(itemMeaning(it))}</div>` : ""}
+      ${itemMeaning(it) ? `<div class="en" style="font-size:15px">${esc(itemMeaning(it))}</div>` : ""}${role === "top" ? bnNoteHTML(it) : ""}
       ${it.source ? `<div class="src">${esc(it.source)}</div>` : ""}
     </div>
     <div class="longhint">Hold to read and scroll · swipe to count</div>
@@ -2538,7 +2575,7 @@ function openSource(libId) {
     ${s.names ? `<p class="muted" style="font-size:13px">The list of Names itself is from <a href="${NAMES_NOTE.url}" target="_blank" rel="noopener">${esc(NAMES_NOTE.ref)}</a>${NAMES_NOTE.grade ? `, graded ${esc(NAMES_NOTE.grade)}` : ""}.</p>` : ""}
     ${s.ar ? `<p class="ar" style="font-size:22px;line-height:2;text-align:right">${esc(s.ar)}</p>` : ""}
     <b>${esc(s.ref)}${s.grade ? ` · <span class="muted" style="font-weight:600">${esc(s.grade)}</span>` : ""}</b>
-    ${s.verified ? `<span class="note">${s.kind === "Quran" ? `Uthmani text from QuranEnc (King Fahd Complex) · ${QURAN_TR()}` : s.kind === "Hisn" ? "Arabic, transliteration, translation and reference from Hisn al-Muslim on sunnah.com" : BN() && HADITH_BN[s.ref] ? "Arabic and grading from sunnah.com · Bangla from the Bangla edition in fawazahmed0/hadith-api" : "Text and grading from the sunnah.com collection"}</span>` : ""}
+    ${s.verified ? `<span class="note">${s.kind === "Quran" ? `Uthmani text from QuranEnc (King Fahd Complex) · ${QURAN_TR()}` : s.kind === "Hisn" ? `Arabic, transliteration, translation and reference from Hisn al-Muslim on sunnah.com${BN() && HBN && HBN[libId] ? " · বাংলা: হিসনুল মুসলিম, IslamHouse (ড. আবু বকর মুহাম্মাদ যাকারিয়া)" : ""}` : BN() && HADITH_BN[s.ref] ? "Arabic and grading from sunnah.com · Bangla from the Bangla edition in fawazahmed0/hadith-api" : "Text and grading from the sunnah.com collection"}</span>` : ""}
     <a href="${link.url}" target="_blank" rel="noopener">${link.label} ↗</a>
     <div class="btn-row" style="justify-content:flex-start"><button class="btn small" data-act="closesrc">Back to counting</button></div></div></div>`);
 }
