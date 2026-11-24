@@ -39,5 +39,8 @@ os.makedirs(OUT, exist_ok=True)
 open(os.path.join(OUT, "index.html"), "w", encoding="utf8").write(head + page + "\n</body></html>\n")
 for f in ["manifest.webmanifest", "privacy.html", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png"]:
     shutil.copy(os.path.join(HERE, "site", f), os.path.join(OUT, f))
+# The Quran font ships with the app (see app.html), so it is there offline too.
+os.makedirs(os.path.join(OUT, "fonts"), exist_ok=True)
+for f in os.listdir(os.path.join(HERE, "fonts")): shutil.copy(os.path.join(HERE, "fonts", f), os.path.join(OUT, "fonts", f))
 open(os.path.join(OUT, "sw.js"), "w", encoding="utf8").write(open(os.path.join(HERE, "site", "sw.js"), encoding="utf8").read().replace("__VERSION__", version))
 print("built", OUT, "version", version, f"{os.path.getsize(os.path.join(OUT, 'index.html')) / 1e6:.2f} MB")

@@ -6,6 +6,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Scheherazade+New:wght@400;700&display=swap">
 <style>
+/* The Quran's font ships with the app (SIL Scheherazade New, OFL), so the Mushaf marks such as the open tanween
+   (ࣰ ࣱ ࣲ) are always drawn in their place, also offline; the phone's own Arabic font does not know them. */
+@font-face { font-family: "Scheherazade Zikr"; src: url("fonts/scheherazade-new-arabic-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Scheherazade Zikr"; src: url("fonts/scheherazade-new-arabic-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
 /* Layout: compact app shell. Two looks the viewer switches between: "night" (ink-teal, ivory, gold)
    and "day" (white and soft grey). Cards are full-size rectangles washed with slowly roaming colour. */
 :root {
@@ -17,7 +22,7 @@
   --star-op: 0.035;
   --font-display: "Marcellus", "Cormorant Garamond", Georgia, serif;
   --font-ui: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-ar: "Scheherazade New", "Amiri", "Geeza Pro", "Noto Naskh Arabic", serif;
+  --font-ar: "Scheherazade Zikr", "Scheherazade New", "Amiri", "Geeza Pro", "Noto Naskh Arabic", serif;
   --font-num: -apple-system, "SF Pro Display", "Segoe UI", Roboto, system-ui, sans-serif;
   color-scheme: dark;
 }

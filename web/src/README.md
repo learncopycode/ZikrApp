@@ -193,3 +193,9 @@ conventions, e.g. ى for the dotless ya and a separate hamza mark, so it is comp
 Every ayah's result is in `quran_check.csv`.
 The English is Saheeh International as published on Tanzil (the earlier edition); QuranEnc carries the later revised
 edition, so wording differs in places (e.g. 1:7 "evoked" / "earned").
+
+## The Quran font
+
+The Arabic font, SIL Scheherazade New (Open Font License, `fonts/OFL.txt`, Arabic subset from @fontsource), ships
+with the app in `fonts/` and is saved for offline use. The phone's own Arabic font does not know the Mushaf's open
+tanween marks (ࣰ ࣱ ࣲ) and can draw them in the wrong place, e.g. an open kasratan on top of the letter.
