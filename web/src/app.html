@@ -103,11 +103,17 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 .chip b { font-size: 13px; font-weight: 600; }
 .chip .ar { font-size: 16px; color: var(--accent); line-height: 1.7; text-align: right; }
 .chip.on { border-color: var(--accent); }
-.mydrop { border-radius: 20px; background: var(--card); border: 1px solid var(--line); overflow: hidden; }
+.mydrop { border-radius: 20px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--card)), var(--card) 70%); border: 1.5px solid color-mix(in srgb, var(--accent) 45%, var(--line)); overflow: hidden; box-shadow: 0 6px 22px -14px var(--accent); }
+.mydrop-pill { display: inline-flex; align-items: center; gap: 4px; padding: 7px 10px 7px 13px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.mydrop-pill svg { width: 16px; height: 16px; transition: transform .3s ease; } .mydrop.open .mydrop-pill svg { transform: rotate(180deg); }
+.mydrop.open .mydrop-pill { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.mydrop.nudge .mydrop-pill { animation: mynudge 2.4s ease-in-out 1s 3; }
+@keyframes mynudge { 0%, 70%, 100% { transform: translateY(0); } 78% { transform: translateY(3px); } 86% { transform: translateY(-1px); } 92% { transform: translateY(2px); } }
+.mydrop-peek { display: block; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; } .mydrop.open .mydrop-peek { display: none; }
 .mydrop-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 14px 13px 16px; text-align: left; color: var(--text); }
 .mydrop-t { flex: 1; min-width: 0; display: flex; flex-direction: column; } .mydrop-t b { font-family: var(--font-display); font-weight: 400; font-size: 19px; } .mydrop-t small { font-size: 12.5px; color: var(--muted); }
 .mydrop-dots { display: flex; gap: 4px; } .mydrop-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
-.mydrop-chev { width: 20px; height: 20px; color: var(--muted); transition: transform .3s ease; } .mydrop.open .mydrop-chev { transform: rotate(180deg); }
+
 .mydrop-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s ease; } .mydrop.open .mydrop-body { grid-template-rows: 1fr; }
 .mydrop-in { overflow: hidden; min-height: 0; } .mydrop .zlist { border: 0; border-top: 1px solid var(--line); border-radius: 0; } .mydrop .empty { margin: 0 14px 14px; }
 .zlist { display: flex; flex-direction: column; border-radius: 20px; background: var(--card); border: 1px solid var(--line); overflow: hidden; }
@@ -989,11 +995,12 @@ function homeHTML() {
   const open = !!S.myOpen, todayTotal = items.reduce((a, it) => a + todayOf(it), 0);
   // My zikr: a compact dropdown at the top, closed until you open it (it remembers).
   let h = `<div class="wrap">${topBar("Zikr")}
-    <section class="mydrop ${open ? "open" : ""}">
+    <section class="mydrop ${open ? "open" : ""} ${S.myOpenedOnce ? "" : "nudge"}">
       <button class="mydrop-head" data-act="mytoggle" aria-expanded="${open}">
-        <span class="mydrop-t"><b>My zikr</b><small>${items.length} zikr${items.length === 1 ? "" : "s"}${todayTotal ? ` · ${fmt(todayTotal)} today` : ""}</small></span>
-        <span class="mydrop-dots">${items.slice(0, 6).map(it => `<i style="--c:${colorOf(it.total)}"></i>`).join("")}</span>
-        <svg class="mydrop-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+        <span class="mydrop-t"><b>My zikr</b><small>${items.length} zikr${items.length === 1 ? "" : "s"}${todayTotal ? ` · ${fmt(todayTotal)} today` : ""}</small>
+          ${items.length ? `<span class="mydrop-peek">${esc(items.slice(0, 4).map(it => it.title).join(" · "))}</span>` : ""}</span>
+        <span class="mydrop-dots">${items.slice(0, 4).map(it => `<i style="--c:${colorOf(it.total)}"></i>`).join("")}</span>
+        <span class="mydrop-pill"><span data-f="mylbl">${open ? "Hide" : "Open"}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
       <div class="mydrop-body"><div class="mydrop-in">`;
   if (items.length) {
     h += `<div class="zlist">` + items.map(it => {
@@ -2629,7 +2636,7 @@ document.addEventListener("click", e => {
     case "preset": form.target = +b.dataset.n; drawAdd(); break;
     case "save": saveAdd(); break;
     case "close": closeCounter(); break;
-    case "mytoggle": { S.myOpen = !S.myOpen; save(); const sec = b.closest(".mydrop"); sec.classList.toggle("open", S.myOpen); b.setAttribute("aria-expanded", S.myOpen); break; }
+    case "mytoggle": { S.myOpen = !S.myOpen; S.myOpenedOnce = true; save(); const sec = b.closest(".mydrop"); sec.classList.toggle("open", S.myOpen); sec.classList.remove("nudge"); b.setAttribute("aria-expanded", S.myOpen); const l = b.querySelector('[data-f="mylbl"]'); if (l) l.textContent = S.myOpen ? "Hide" : "Open"; break; }
     case "pickplace": openPlacePicker(); break;
     case "closeplace": closePlacePicker(); break;
     case "setplace": setPlace({ ...cityObj(CITIES[+b.dataset.c]), source: "manual" }); break;
