@@ -67,6 +67,76 @@ for cid, book, col, slug, prefix in ((1, 80, "Sahih al-Bukhari", "bukhari", "bk"
             if t and not t.startswith("(…/…)") and "অবিকল" not in t[:200] and not re.match(r"[(ء-يً-ْ\s]{25,}", t): bn = t
         num = num.replace(" ", ""); sahih.append({"id": f"{prefix}{num}", "col": col, "num": num, "chapter": CH.get((cid, book, ch), ""), "ar": join(pre, ar, post).replace("\u200f", ""), "en": en, "bn": bn,
                       "url": f"https://sunnah.com/{slug}:{num}"})
+# ---- Second pass, by number, for the hadiths the Arabic match missed. The Bangla editions record the
+# sunnah.com number: Bukhari by hadithnumber, Muslim as arabicnumber "2683.02" for 2683b.
+# A lettered Muslim narration (b, c, …) that is the same hadith as its first narration through another chain
+# shows the first narration's Bangla, with a note saying so; if its wording differs significantly it keeps its own.
+import difflib
+def eds(c): return json.load(open(os.path.join(hbn, f"ben-{c}.json"), encoding="utf8"))["hadiths"]
+BK = {h["hadithnumber"]: h["text"] for h in eds("bukhari")}
+def muslim_numbers(hs):
+    # A few entries lack their number; when they sit between hadith N-1 and N+1 they are N (.01, .02, … in order).
+    base = lambda v: int(str(v).split(".")[0]) if v not in (None, "") else None
+    out, i = {}, 0
+    while i < len(hs):
+        v = hs[i].get("arabicnumber")
+        if v not in (None, ""): out[str(v)] = hs[i]["text"]; i += 1; continue
+        j = i
+        while j < len(hs) and hs[j].get("arabicnumber") in (None, ""): j += 1
+        p = base(hs[i - 1].get("arabicnumber")) if i else None; n = base(hs[j].get("arabicnumber")) if j < len(hs) else None
+        if p and n and n - p == 2:
+            run = hs[i:j]
+            for k, h in enumerate(run): out[f"{p + 1}.{k + 1:02d}" if len(run) > 1 else str(p + 1)] = h["text"]
+            if len(run) > 1: out.setdefault(str(p + 1), run[0]["text"])
+            else: out[f"{p + 1}.01"] = run[0]["text"]
+        i = j
+    return out
+MS = muslim_numbers(eds("muslim"))
+def clean_bn(t, n):
+    t = (t or "").strip()
+    t = re.sub(r"^\((?:…|\.)+(?:/[^)]*)?\)\s*", "", t)   # "(…)", "(….)", "(…/...)", "(…/২৭৩২)": a marker for a further chain
+    t = re.sub(r"^[০-৯]+\s*[।.]\s*", "", t)
+    return t
+def chain_only(t):   # "…narrated the same hadith word for word through this chain": no text of its own
+    return bool(re.search(r"সানাদে", t) and re.search(r"হুবহু|অবিকল|অনুরূপ", t) and len(t) < 260)
+differs_re = re.compile(r"addition|no mention|not found|but with this variation|\badds?\b|\badded\b", re.I)
+def ms_key(num):   # "2683b" -> "2683.02", "2686" -> "2686"
+    m = re.match(r"^(\d+)([a-z]?)$", num)
+    if not m: return None, None
+    base, let = m.group(1), m.group(2)
+    return (f"{base}.{ord(let) - 96:02d}" if let else base), base
+def body_en(t):   # the words of the hadith, without the chain
+    t = re.sub(r"^(Narrated|It was narrated|.{0,200}?reported( on the authority of)?[^:]*?:)", "", t or "", flags=re.I)
+    return re.sub(r"\W+", " ", t.lower()).strip()
+same_chain_re = re.compile(r"(this hadith has been (narrated|reported|transmitted)|with the same chain|through (another|a different) chain|with a slight (variation|change))", re.I)
+by_id = {x["id"]: x for x in sahih}
+fixed = {"number": 0, "same": 0}
+for x in sahih:
+    if x["bn"]: continue
+    first = x["num"].split(",")[0]
+    if x["col"] == "Sahih al-Bukhari":
+        if first.isdigit() and BK.get(int(first)):
+            x["bn"] = clean_bn(BK[int(first)], first); fixed["number"] += 1
+        continue
+    key, base = ms_key(first)
+    if not key: continue
+    own = clean_bn(MS.get(key) or (MS.get(base + ".01") if key == base else MS.get(base) if key == base + ".01" else None), first)
+    letter = first[len(base):]
+    if letter and letter != "a":
+        orig = by_id.get(f"ms{base}a") or by_id.get(f"ms{base}")
+        orig_bn = clean_bn((orig or {}).get("bn") or MS.get(base + ".01") or MS.get(base), base)
+        if orig_bn and not chain_only(orig_bn):
+            x["same_as"] = f"{base}a"
+            if differs_re.search(x["en"]) and not re.search(r"slight", x["en"], re.I) and own:
+                # its wording differs: the first narration, then this narration's own Bangla, which says how
+                x["bn"] = orig_bn + "\n\n" + own; x["differs"] = True
+            else:
+                x["bn"] = orig_bn   # the same hadith through another chain
+            fixed["same"] += 1
+            continue
+    if own and len(own) >= 40 and not chain_only(own):
+        x["bn"] = own; fixed["number"] += 1
+print("second pass:", fixed, "| still without Bangla:", [x["id"] for x in sahih if not x["bn"]])
 json.dump({"he": he, "he_cats": cat_out, "sahih": sahih}, open(out, "w", encoding="utf8"), ensure_ascii=False, separators=(",", ":"))
 print("HadeethEnc", len(he), "with a clear dua", sum(1 for e in he if e.get("dua_ar")), "| Bukhari/Muslim", len(sahih), "with Bangla", sum(1 for s in sahih if s["bn"]))
 for e in [x for x in he if x.get("dua_ar")][:8]: print(" ", e["id"], e["dua_ar"][:45], "|", e.get("dua_tl", "")[:30], "|", e["dua_en"][:60])

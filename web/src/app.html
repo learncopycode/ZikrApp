@@ -927,6 +927,11 @@ function loadHadithLib(H) {
   HE_CATS = H.he_cats;
   HE_LIB = H.he.map(e => ({ ...e, kind: "he", arabic: e.dua_ar || e.ar, translit: e.dua_tl || "", meaning: e.dua_en || e.en, title: e.title,
     count: 1, source: e.attr ? `${e.attr} · HadeethEnc` : "HadeethEnc", chapter: (H.he_cats[e.cat] || {}).en || "Duas from hadith" }));
+  // A later narration of a Muslim hadith (2683b…) shows the first narration's Bangla, saying so.
+  const bnNum2 = t => String(t).replace(/\d/g, x => "০১২৩৪৫৬৭৮৯"[x]);
+  for (const e of H.sahih) if (e.same_as && e.bn) e.bn += e.differs
+    ? `\n\n(এই বর্ণনার শব্দে কিছু পার্থক্য আছে: ওপরে মূল হাদীস, সহীহ মুসলিম ${bnNum2(e.same_as)}; তারপর এই বর্ণনা।)`
+    : `\n\n(একই হাদীস, ভিন্ন সনদে বর্ণিত। বাংলা পাঠ মূল বর্ণনার: সহীহ মুসলিম ${bnNum2(e.same_as)}।)`;
   SAHIH_LIB = H.sahih.map(e => ({ ...e, kind: "sahih", arabic: e.ar, translit: "", meaning: e.en, count: 1, source: `${e.col} ${e.num}`,
     title: (e.chapter || "").replace(/^Chapter:\s*/i, "").replace(/[.:]\s*$/, "") || `${e.col} ${e.num}`, chapter: e.col === "Sahih Muslim" ? "Sahih Muslim: remembrance and supplication" : "Sahih al-Bukhari: invocations" }));
   for (const d of HE_LIB.concat(SAHIH_LIB)) { LIB.push(d); ALL.push(d); BY_ID[d.id] = d; INDEX.push({ d, tk: searchKey(d.translit), ti: searchKey(d.title) }); }
