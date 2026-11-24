@@ -16,10 +16,10 @@ def one_per_tz(cities):   # the largest city of each time zone (and Makkah), for
     return out
 taf = {ed: {s: gz(open(os.path.join(TAF, ed, f"{s}.json"), "rb").read()) for s in range(1, 115)} for ed in ("ik", "mx", "zkb", "mxb")}
 parts = {
-    "/*DATA*/": dump({"hisn": j("hisn.json"), "names": j("names.json"), "virtues": j("hisn_virtues.json")}),
+    "/*DATA*/": dump({"hisn": j("hisn.json"), "names": j("names.json"), "virtues": j("hisn_virtues.json"), "names_bn": j("names_bn.json")}),
     "/*REFLECTIONS*/": r("reflections.js"), "/*MORE*/": r("more_topics.js"),
     "/*SOURCES*/": r("sources.js"), "/*QURAN*/": r("quran.js"), "/*ART*/": r("art.js"),
-    "/*HISN_BN_TITLES*/": dump(j("hisn_bn_titles.json")), "/*HADITH_BN*/": dump(j("hadith_bn.json")),
+    "/*HISN_BN_TITLES*/": dump(j("hisn_bn_titles.json")), "/*HADITH_BN*/": json.dumps(gz(open(os.path.join(HERE, "hadith_bn.json"), "rb").read())),
     "/*QURAN_BN*/": json.dumps(gz(open(os.path.join(HERE, "quran_bn.json"), "rb").read())),
     "/*TAFSIR_GZ*/": json.dumps(taf),
     "/*ADHAN_LIB*/": r("adhan.umd.min.js").replace("</", "<\\/").replace("//# sourceMappingURL=adhan.umd.min.js.map", ""),

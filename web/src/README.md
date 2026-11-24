@@ -165,7 +165,10 @@ The reader marks the last ayah of the portion. The waking hours button on the ca
   is matched by number (the Arabic agrees wherever both have it). The single phrases split out of longer duas
   (Subhanallah, Alhamdulillah, …) take the matching sentence of the book's Bangla; the dhikr quoted inside
   narrations take the Bangla the book gives right after each quoted Arabic dhikr. Embedded gzipped.
-- Where no published Bangla exists (the meanings of the 99 Names, the Bukhari/Muslim hadiths not matched to a
-  Bangla edition, your own zikrs), Bangla mode on claude.ai shows an AI translation, marked
+- `names_bn.json` (by `build_names_bn.py`): the Bangla meanings of the 99 Names from the Bangla edition of
+  Jami` at-Tirmidhi 3507 (fawazahmed0/hadith-api, ben-tirmidhi), the same hadith the list of Names comes from;
+  it gives each Name with its meaning in brackets, in the same order. Only three typing slips are corrected
+  (listed in the script) and the Assamese letter ৰ, typed by mistake for র, is normalised.
+- Where no published Bangla exists (the Bukhari/Muslim hadiths not matched to a Bangla edition, your own zikrs), Bangla mode on claude.ai shows an AI translation, marked
   "AI অনুবাদ · ভুল থাকতে পারে", made once and kept on the device. Without AI (the installed app) the English stays,
   marked "বাংলা অনুবাদ পাওয়া যায়নি".

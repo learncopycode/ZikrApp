@@ -549,7 +549,10 @@ const hadithSrc = ref => (ref && HADITH_SRC[ref]) || null;
    (Hisn al-Muslim dua meanings, the 99 Names' meanings) the English is shown. */
 const BN = () => S.lang === "bn";
 const HISN_BN_TITLES = /*HISN_BN_TITLES*/;
-const HADITH_BN = /*HADITH_BN*/;
+// Bangla hadith texts for the reflections and sources (gzipped; filled in just after start).
+let HADITH_BN = {};
+const HADITH_BN_GZ = /*HADITH_BN*/;
+if (typeof DecompressionStream !== "undefined") gunzipB64(HADITH_BN_GZ).then(t => { HADITH_BN = JSON.parse(t); }).catch(() => {});
 const QURAN_BN_GZ = /*QURAN_BN*/;
 async function gunzipB64(b64) {
   const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
@@ -644,6 +647,8 @@ const QURAN_DUAS = ["2:255", ...QULS, "2:285-286",
   "26:83-85", "27:19", "28:16", "28:21", "28:24", "37:100", "46:15", "71:28"];
 const QURAN_LIB = QURAN_DUAS.map(k => ({ id: "q-" + k, kind: "quran", key: k, qkeys: [k], ...quranText([k]), title: quranTitle([k]), count: QULS.includes(k) ? 3 : 1, source: `Quran ${k}`, chapter: "From the Quran" }));
 const NAMES = DATA.names.names.map(x => ({ ...x, kind: "name", title: x.translit, count: 33, source: "Jami` at-Tirmidhi 3507", chapter: "99 Names" }));
+// Bangla meanings of the Names: the Bangla edition of Jami` at-Tirmidhi 3507 itself (see build_names_bn).
+const NAMES_BN = DATA.names_bn || {};
 const NAMES_NOTE = { ref: DATA.names.ref, url: DATA.names.url, grade: DATA.names.grade };
 const HISN_LIB = CHAPTERS.flatMap(c => c.items);
 const LIB = HISN_LIB.concat(QURAN_LIB), ALL = LIB.concat(NAMES);
@@ -654,12 +659,13 @@ function meaningOf(d) {
   if (BN() && d.kind === "he" && d.bn) return d.bn;   // the whole hadith in Bangla, as published (its dua is inside)
   if (BN() && d.kind === "sahih" && d.bn) return d.bn;
   if (BN() && HBN && !d.qkeys && HBN[d.id]) return HBN[d.id];
+  if (BN() && d.kind === "name" && NAMES_BN[d.id]) return NAMES_BN[d.id].bn;
   if (BN() && QBN && d.qkeys) return d.qkeys.map(k => (startsSurah(k) ? qbn(1, 1) + "\n" : "") + rangeMeaning(k)).join("\n\n");
   return d.meaning;
 }
 /* Where no published Bangla exists (e.g. the 99 Names' meanings, some hadiths, your own zikrs), Bangla mode shows
    an AI translation on claude.ai, marked as such; without AI the English stays. Published Bangla always comes first. */
-const hasPubBn = d => !!d && (d.qkeys ? !!QBN : d.kind === "he" || d.kind === "sahih" ? !!d.bn : !!(HBN && HBN[d.id]));
+const hasPubBn = d => !!d && (d.kind === "name" ? !!NAMES_BN[d.id] : d.qkeys ? !!QBN : d.kind === "he" || d.kind === "sahih" ? !!d.bn : !!(HBN && HBN[d.id]));
 const aiKey = it => it.libraryID ? it.libraryID : "u:" + it.id + ":" + (it.translation || "").length;
 const needsAiBn = it => BN() && !hasPubBn(BY_ID[it.libraryID]) && !!(BY_ID[it.libraryID]?.meaning || it.translation) && !(it.libraryID && (!HBN || !QBN));
 const aiBnOf = it => needsAiBn(it) ? (S.aiBn || {})[aiKey(it)] || null : null;
@@ -1131,8 +1137,8 @@ function subHTML(sub) {
   if (sub === "hadith" || sub.startsWith("hc:") || sub.startsWith("hb:")) return hadithSubHTML(sub);
   const title = sub === "names" ? "99 Names of Allah" : sub === "hisn" ? "Hisn al-Muslim" : sub === "quran" ? "Duas from the Quran" : c ? chTitle(c) : "";
   const back = `<div class="bar"><button class="icon-btn" data-act="${c ? "sub" : "tab"}" ${c ? 'data-sub="hisn"' : 'data-tab="discover"'} aria-label="Back">${ICONS.back}</button><div class="brand"><b>${esc(title)}</b>${c ? "<span>Hisn al-Muslim</span>" : ""}</div></div>`;
-  if (sub === "names") return `<div class="wrap">${back}<div class="list">${NAMES.map(n => libRow(n, n.meaning)).join("")}</div>
-    <p class="note">The list as narrated in <a href="${NAMES_NOTE.url}" target="_blank" rel="noopener">${esc(NAMES_NOTE.ref)}</a>${NAMES_NOTE.grade ? ` (graded ${esc(NAMES_NOTE.grade)} on sunnah.com)` : ""}. That Allah has ninety-nine Names is narrated in Sahih al-Bukhari 2736. Translation and transliteration from sunnah.com.</p></div>`;
+  if (sub === "names") return `<div class="wrap">${back}<div class="list">${NAMES.map(n => libRow(n, meaningOf(n))).join("")}</div>
+    <p class="note">The list as narrated in <a href="${NAMES_NOTE.url}" target="_blank" rel="noopener">${esc(NAMES_NOTE.ref)}</a>${NAMES_NOTE.grade ? ` (graded ${esc(NAMES_NOTE.grade)} on sunnah.com)` : ""}. That Allah has ninety-nine Names is narrated in Sahih al-Bukhari 2736. Translation and transliteration from sunnah.com.${BN() ? " বাংলা অর্থ: জামে‘ আত-তিরমিযী ৩৫০৭-এর বাংলা অনুবাদ (fawazahmed0/hadith-api)।" : ""}</p></div>`;
   if (sub === "quran") return `<div class="wrap">${back}<div class="list">${QURAN_LIB.map(d => libRow(d, `×${d.count} · ${d.source}`)).join("")}</div>
     <p class="note">Uthmani text (QuranEnc, King Fahd Complex), Saheeh International translation, Quran.com transliteration.</p></div>`;
   if (sub === "hisn") return `<div class="wrap">${back}
