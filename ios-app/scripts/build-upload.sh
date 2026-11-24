@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Archives the app, signs it automatically with the App Store Connect API key and uploads it.
-# Needs KEY_ID, ISSUER, P8, TEAM, BUILD_NUMBER. Run from ZikrApp/ios-app after prepare-ios.sh.
+# Needs KEY_ID, ISSUER, P8, TEAM, BUILD_NUMBER. Run from ios-app after prepare-ios.sh.
 set -euo pipefail
 VERSION=$(node -p 'require("./package.json").appVersion')
 KEY="$RUNNER_TEMP/AuthKey_$KEY_ID.p8"; printf '%s\n' "$P8" > "$KEY"

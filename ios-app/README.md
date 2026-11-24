@@ -28,7 +28,7 @@ it to TestFlight; everything below can be done from a phone browser.
 4. **API key** – App Store Connect → Users and Access → Integrations → App Store Connect API →
    Team Keys → + : name "GitHub", access **Admin**. Note the **Key ID** and the **Issuer ID**, and
    download the `.p8` file once (open it and copy all its text).
-5. **GitHub secrets** – github.com/learncopycode/Claude → Settings → Secrets and variables →
+5. **GitHub secrets** – github.com/learncopycode/ZikrApp → Settings → Secrets and variables →
    Actions → New repository secret, four times:
    - `APPSTORE_KEY_ID` – the Key ID
    - `APPSTORE_ISSUER_ID` – the Issuer ID
@@ -37,7 +37,7 @@ it to TestFlight; everything below can be done from a phone browser.
 
 ## Build
 
-Any push that changes `ZikrApp/app/` or this folder builds and uploads a new version. To build without a
+Any push that changes `app/` or this folder builds and uploads a new version. To build without a
 change: Actions → "iPhone app → TestFlight" → Run workflow (the button appears once this file is on
 the default branch), or re-run the last run.
 
@@ -47,7 +47,7 @@ app on your iPhone and add yourself as an internal tester to install Zikr.
 ## Publish on the App Store
 
 App Store Connect → the app → fill in the description, keywords, support URL, a privacy policy URL
-(`https://learncopycode.github.io/Claude/ZikrApp/app/privacy.html` once GitHub Pages is on), screenshots
+(`https://learncopycode.github.io/ZikrApp/app/privacy.html` once GitHub Pages is on), screenshots
 (6.9" iPhone; take them on your phone), age rating, and "App Privacy: Data Not Collected". Choose
 the build and Submit for Review.
 

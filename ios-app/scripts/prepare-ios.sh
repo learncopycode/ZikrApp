@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Creates the Xcode project for the Zikr iPhone app on a Mac (GitHub Actions macOS runner).
-# Run from ZikrApp/ios-app. Uses BUNDLE_ID (default com.learncopycode.zikr).
+# Run from ios-app. Uses BUNDLE_ID (default com.learncopycode.zikr).
 # WITH_ALARMS=0 builds without the AlarmKit plugin (the full-adhan alarm); the app then uses notifications.
 set -euo pipefail
 BUNDLE_ID="${BUNDLE_ID:-com.learncopycode.zikr}"
