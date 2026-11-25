@@ -43,7 +43,6 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 a { color: var(--accent); }
 button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 input, textarea { font: inherit; color: var(--text); }
-html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .ar { font-family: var(--font-ar); direction: rtl; font-feature-settings: "cv62" 1; }   /* kasra with shadda drawn below the letter, so it is not read as a fatha */
 .display { font-family: var(--font-display); font-weight: 400; }
 .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
@@ -540,17 +539,9 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 <div id="layer"></div>
 
 <script>
-/* No zooming (it is an app, not a web page): iPhone ignores the page's "no zoom" setting, so pinch and
-   double-tap zoom are stopped here. */
 // Put the cursor in a field by itself only with a mouse: on a phone that focus brings no keyboard, and a tap on a field
 // that is already focused often does not bring it up either, so the field waits for your own tap.
 const autoFocus = (el, ms) => { if (el && !matchMedia("(pointer: coarse)").matches) setTimeout(() => el.focus(), ms); };
-(function noZoom() {
-  const stop = e => { if (e.cancelable) e.preventDefault(); };
-  for (const ev of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(ev, stop, { passive: false });
-  // Only iPhone's own pinch events are stopped; ordinary touches are left alone so text fields and the keyboard work.
-  // Double-tap zoom is turned off by touch-action: manipulation (CSS), which keeps quick repeated taps working.
-})();
 
 const DATA = /*DATA*/;
 /*REFLECTIONS*/
