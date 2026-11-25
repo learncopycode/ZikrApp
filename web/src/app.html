@@ -548,9 +548,7 @@ const autoFocus = (el, ms) => { if (el && !matchMedia("(pointer: coarse)").match
 (function noZoom() {
   const stop = e => { if (e.cancelable) e.preventDefault(); };
   for (const ev of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(ev, stop, { passive: false });
-  const inField = e => e.target && e.target.closest && e.target.closest("input, textarea, select, [contenteditable]");
-  document.addEventListener("touchmove", e => { if (e.touches && e.touches.length > 1 && !inField(e)) stop(e); }, { passive: false });
-  document.addEventListener("touchstart", e => { if (e.touches && e.touches.length > 1 && !inField(e)) stop(e); }, { passive: false });
+  // Only iPhone's own pinch events are stopped; ordinary touches are left alone so text fields and the keyboard work.
   // Double-tap zoom is turned off by touch-action: manipulation (CSS), which keeps quick repeated taps working.
 })();
 
@@ -1111,7 +1109,7 @@ function homeHTML() {
       <div class="chips">${m.items.map(d => `<button class="chip ${added(d) ? "on" : ""}" data-act="lib" data-id="${d.id}"><b>${esc(d.title)}</b><span class="ar">${esc(d.arabic)}</span></button>`).join("")}${m.total > m.items.length ? `<button class="chip" data-act="sub" data-sub="${m.sub}"><b>See all ${m.total}</b><span class="muted" style="font-size:12px">Hisn al-Muslim</span></button>` : ""}</div>
     </section>
     ${hadithDayHTML()}`;
-  return h + `<p class="note">Counts are saved on this device. · Zikr v${APP_VERSION}</p></div>`;
+  return h + `<p class="note">Counts are saved on this device. · Zikr v${APP_VERSION}${window.ZIKR_BUILD ? ` · build ${String(window.ZIKR_BUILD).slice(0, 4)}` : ""}</p></div>`;
 }
 
 /* ---------- Discover ---------- */

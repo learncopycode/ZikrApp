@@ -11,8 +11,9 @@ version = hashlib.sha1(page.encode()).hexdigest()[:10]
 head = """<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#fffdf9">
+<script>window.ZIKR_BUILD = "__BUILD__";</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Zikr">
@@ -36,6 +37,7 @@ if ("serviceWorker" in navigator) addEventListener("load", () => {
 </head><body>
 """
 os.makedirs(OUT, exist_ok=True)
+head = head.replace("__BUILD__", version)   # shown at the bottom of Home, to tell which version a phone has
 open(os.path.join(OUT, "index.html"), "w", encoding="utf8").write(head + page + "\n</body></html>\n")
 for f in ["manifest.webmanifest", "privacy.html", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png"]:
     shutil.copy(os.path.join(HERE, "site", f), os.path.join(OUT, f))
