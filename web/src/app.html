@@ -343,6 +343,11 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 .lastread svg { width: 11px; height: 11px; }
 .qstar-row { display: flex; justify-content: center; margin-bottom: 4px; transition: opacity .3s ease, transform .3s ease; } .qstar-row.gone { opacity: 0; transform: scale(.6); } .qstar-row .qstar { margin: 0; font-size: 12px; padding: 5px 12px; letter-spacing: .02em; }
 .qstar-row .qstar i { font-size: 15px; }
+/* The 15 ayahs with the sajdah sign ۩: a note on the slide, like the "You stopped here" one; it stays on the slide. */
+.sajdah-row { display: flex; justify-content: center; margin-bottom: 6px; }
+.lastread.sajdah-pill { margin: 0; padding: 5px 12px; font-size: 12px; letter-spacing: 0.02em; font-weight: 700; color: #fff; background: linear-gradient(135deg, #3f9a6c, #2b7a8c);
+  box-shadow: 0 2px 12px rgba(43, 122, 140, .4); animation: starIn .6s cubic-bezier(.2,1.6,.4,1) both; white-space: normal; text-align: center; max-width: 92%; }
+.lastread.sajdah-pill i { font-style: normal; font-size: 15px; }
 .hstar { color: #e2962b; font-size: 14px; }
 .lastread.qstar { background: linear-gradient(135deg, #f6c64a, #e2962b); color: #3b2604; font-weight: 700; box-shadow: 0 2px 10px rgba(226, 150, 43, .45); animation: starIn .6s cubic-bezier(.2,1.6,.4,1) both; }
 .lastread.qstar i { font-style: normal; font-size: 12px; display: inline-block; animation: twinkle 2.4s ease-in-out infinite; }
@@ -2162,7 +2167,7 @@ function ayahCardHTML(p, role) {
     <div class="ctop"><span class="lbl">${esc(m[1])} · ${p.s}:${p.a}</span>${flag ? `<button class="srcchip qcchip" data-act="qcdiff" data-s="${p.s}" data-a="${p.a}">⚠ Quran.com</button>` : ""}
       <button class="srcchip" data-act="tafsir" aria-label="Tafsir of this ayah">${ICONS.book}Tafsir</button>
       <button class="srcchip bm ${isBookmarked(p) ? "on" : ""}" data-act="bm" data-s="${p.s}" data-a="${p.a}" aria-label="${isBookmarked(p) ? "Remove bookmark" : "Bookmark this ayah"}">${ICONS.bookmark}</button></div>
-    <div class="ctext">${inPlan() && !hourlyStatus().complete && hourlyStatus().behind > 0 && ayahIndex(p) === hourlyStatus().endIdx ? `<div class="qstar-row"><span class="lastread qstar"><i>◆</i> Last ayah of your portion</span></div>` : ""}${role === "top" && starAt(p) ? `<div class="qstar-row"><span class="lastread qstar"><i>★</i> You stopped here</span></div>` : ""}${bism}<div class="arb ar" style="font-size:${size}px">${ar} <span class="ayno">﴿${arNum(p.a)}﴾</span></div>
+    <div class="ctext">${ar.includes("\u06e9") ? `<div class="sajdah-row"><span class="lastread sajdah-pill"><i>۩</i> ${BN() ? "তিলাওয়াতের সিজদা · এই আয়াত তিলাওয়াতের পর সিজদা দিন" : "Sajdah · prostrate after reciting this ayah"}</span></div>` : ""}${inPlan() && !hourlyStatus().complete && hourlyStatus().behind > 0 && ayahIndex(p) === hourlyStatus().endIdx ? `<div class="qstar-row"><span class="lastread qstar"><i>◆</i> Last ayah of your portion</span></div>` : ""}${role === "top" && starAt(p) ? `<div class="qstar-row"><span class="lastread qstar"><i>★</i> You stopped here</span></div>` : ""}${bism}<div class="arb ar" style="font-size:${size}px">${ar} <span class="ayno">﴿${arNum(p.a)}﴾</span></div>
       ${S.tlQuran ? `<div class="tl" style="font-size:15.5px">${esc(tl)}</div>` : ""}<div class="en" style="font-size:15px" ${BN() && QBN ? 'lang="bn"' : ""}>${esc(en)}</div></div>
     <div class="longhint">Hold to read and scroll · swipe for the next ayah</div>
     <div class="cband"><span class="meta"><b>Ayah ${p.a} of ${m[3]}</b><span>${esc(m[2])} · ${m[4] === "meccan" ? "Makki" : "Madani"}</span></span>
