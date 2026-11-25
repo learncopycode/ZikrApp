@@ -542,11 +542,15 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 <script>
 /* No zooming (it is an app, not a web page): iPhone ignores the page's "no zoom" setting, so pinch and
    double-tap zoom are stopped here. */
+// Put the cursor in a field by itself only with a mouse: on a phone that focus brings no keyboard, and a tap on a field
+// that is already focused often does not bring it up either, so the field waits for your own tap.
+const autoFocus = (el, ms) => { if (el && !matchMedia("(pointer: coarse)").matches) setTimeout(() => el.focus(), ms); };
 (function noZoom() {
   const stop = e => { if (e.cancelable) e.preventDefault(); };
   for (const ev of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(ev, stop, { passive: false });
-  document.addEventListener("touchmove", e => { if (e.touches && e.touches.length > 1) stop(e); }, { passive: false });
-  document.addEventListener("touchstart", e => { if (e.touches && e.touches.length > 1) stop(e); }, { passive: false });
+  const inField = e => e.target && e.target.closest && e.target.closest("input, textarea, select, [contenteditable]");
+  document.addEventListener("touchmove", e => { if (e.touches && e.touches.length > 1 && !inField(e)) stop(e); }, { passive: false });
+  document.addEventListener("touchstart", e => { if (e.touches && e.touches.length > 1 && !inField(e)) stop(e); }, { passive: false });
   // Double-tap zoom is turned off by touch-action: manipulation (CSS), which keeps quick repeated taps working.
 })();
 
@@ -1394,7 +1398,7 @@ function openPlacePicker() {
     const res = low.length < 2 ? [] : exact.slice(0, 12).concat(sound.slice(0, 6), CITIES.filter(c => !exact.includes(c) && !sound.includes(c) && searchKey(c[0] + c[1]).includes(k)).slice(0, 4));
     document.getElementById("place-list").innerHTML = res.map(c => `<button class="row" data-act="setplace" data-c="${CITIES.indexOf(c)}" style="text-align:left"><span class="rt"><b>${esc(c[0])}</b><small>${esc(c[1])}</small></span></button>`).join("") || (q.trim().length >= 2 ? `<div class="empty">No city found. Try the nearest larger city.</div>` : "");
   };
-  draw(""); const inp = document.getElementById("place-q"); inp.oninput = () => draw(inp.value); setTimeout(() => inp.focus(), 300);
+  draw(""); const inp = document.getElementById("place-q"); inp.oninput = () => draw(inp.value); autoFocus(inp, 300);
 }
 const closePlacePicker = () => $layer.querySelectorAll('.sheet[aria-label="Choose a place"], .scrim[data-act="closeplace"]').forEach(e => e.remove());
 /* The adhan waits until the place is known (detected, chosen, or detection gave up), so it never sounds for a
@@ -2764,7 +2768,7 @@ const form = { kind: "zikr", title: "", arabic: "", translit: "", translation: "
 function openAdd() {
   Object.assign(form, { kind: "zikr", title: "", arabic: "", translit: "", translation: "", target: 33, filled: null });
   $layer.insertAdjacentHTML("beforeend", `<div class="scrim" data-act="closeadd"></div><div class="sheet" role="dialog" aria-label="Add a zikr"><div class="in" id="addin"></div></div>`);
-  drawAdd(); setTimeout(() => document.getElementById("f-title")?.focus(), 380);
+  drawAdd(); autoFocus(document.getElementById("f-title"), 380);
 }
 function closeAdd() { $layer.querySelectorAll(".scrim, .sheet").forEach(e => e.remove()); }
 const unchanged = () => form.filled && form.filled.arabic === form.arabic && form.filled.title === form.title;
