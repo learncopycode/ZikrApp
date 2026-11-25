@@ -321,6 +321,8 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 .plan-done .ctext { display: flex; flex-direction: column; height: 100%; }
 .hint .ahead-count { color: var(--accent); font-weight: 700; }
 .plan-count b { color: var(--accent); }
+.card.qc-flag { box-shadow: 0 0 0 2.5px #d9534f inset, 0 18px 40px -20px rgba(0,0,0,.35); }
+.qcchip { color: #d9534f !important; border-color: #d9534f !important; font-weight: 700; }
 .segs { display: flex; gap: 3px; margin: 8px 6px 0; } .segs i { flex: 1; height: 6px; border-radius: 3px; background: var(--line); transition: background .3s; }
 .segs i.done { background: var(--accent); } .segs i.now { background: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: 0 0 0 1.5px var(--accent) inset; }
 .seal { position: absolute; left: 50%; top: 42%; z-index: 30; transform: translate(-50%, -50%); width: 150px; height: 150px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -2109,14 +2111,55 @@ function closeReader() {
   ui.aheadUntil = 0; save();
   el.classList.add("out"); setTimeout(() => el.remove(), 280); render();
 }
+/* Each ayah opened in the reader is checked once against Quran.com (its King Fahd Complex "QPC Hafs" text). Only a real
+   difference flags the slide: the same signs stored with different codes, in a different order, or different spacing
+   are the same text and pass. Results are kept on the device; offline, the check waits for the next time. */
+const QC_EQ = { "\u08f0": "\u0657", "\u08f1": "\u065e", "\u08f2": "\u0656", "\u0640": "" };
+function qcClusters(t) {
+  const out = [];
+  for (const c of [...(t || "").normalize("NFC")].map(c => QC_EQ[c] ?? c).join("")) {
+    if (/\s|\u00a0/.test(c)) continue;
+    if (/\p{Mn}/u.test(c)) { if (out.length) out[out.length - 1][1].push(c); }
+    else out.push([c, []]);
+  }
+  return JSON.stringify(out.map(([b, m]) => [b, m.sort()]));
+}
+const qcKey = p => `${p.s}:${p.a}`;
+const qcFlag = p => { const r = (S.qcom || {})[qcKey(p)]; return r && r !== "ok" ? r : null; };
+const qcBusy = {};
+async function qcCheck(p) {
+  const k = qcKey(p); S.qcom = S.qcom || {};
+  if (S.qcom[k] || qcBusy[k] || navigator.onLine === false) return;
+  qcBusy[k] = 1;
+  try {
+    const r = await fetch(`https://api.quran.com/api/v4/quran/verses/qpc_hafs?verse_key=${k}`);
+    if (!r.ok) throw 0;
+    const off = ((await r.json()).verses?.[0]?.text_qpc_hafs || "").replace(/[\s\u00a0]*[\u0660-\u0669]+\s*$/, "");
+    if (!off) throw 0;
+    const app = QURAN_TEXT[p.s - 1][p.a - 1][0];
+    S.qcom[k] = qcClusters(app) === qcClusters(off) ? "ok" : { q: off, at: Date.now() };
+    save();
+    if (S.qcom[k] !== "ok" && $reader && qcKey(quranPos()) === k) drawReader();
+  } catch (e) {} finally { delete qcBusy[k]; }
+}
+function openQcDiff(p) {
+  const f = qcFlag(p); if (!f) return;
+  $layer.insertAdjacentHTML("beforeend", `<div class="scrim" data-act="closesrc" style="z-index:54"></div><div class="sheet-src" role="dialog" aria-label="Differs from Quran.com"><div class="in">
+    <span class="eyebrow">${esc(QURAN_META[p.s - 1][1])} ${p.s}:${p.a}</span><b class="display" style="font-size:19px">This ayah differs from Quran.com</b>
+    <span class="muted" style="font-size:13px">In the app</span><p class="ar" style="font-size:26px;line-height:2;text-align:right;margin:0">${esc(QURAN_TEXT[p.s - 1][p.a - 1][0])}</p>
+    <span class="muted" style="font-size:13px">On Quran.com (King Fahd Complex, QPC Hafs)</span><p class="ar" style="font-size:26px;line-height:2;text-align:right;margin:0">${esc(f.q)}</p>
+    <a href="https://quran.com/${p.s}/${p.a}" target="_blank" rel="noopener">Open on Quran.com ↗</a>
+    <div class="btn-row" style="justify-content:flex-start"><button class="btn small" data-act="closesrc">Back to reading</button></div></div></div>`);
+}
 function ayahCardHTML(p, role) {
   const [ar, , tl] = QURAN_TEXT[p.s - 1][p.a - 1], en = ayahMeaning(p.s, p.a), m = QURAN_META[p.s - 1], len = ar.length;
   const size = len > 400 ? 26 : len > 200 ? 30 : len > 90 ? 34 : 42;
   // A slow hue drift through each surah, continuous from ayah to ayah.
   const h = (p.s * 37 + p.a * 3) % 360;
   const bism = p.a === 1 && p.s !== 1 && p.s !== 9 ? `<div class="bism ar">${BISMILLAH}</div>` : "";
-  return `<div class="card ${role}" style="${auroraVars(h)}">${aurora()}
-    <div class="ctop"><span class="lbl">${esc(m[1])} · ${p.s}:${p.a}</span>
+  const flag = qcFlag(p);
+  return `<div class="card ${role} ${flag ? "qc-flag" : ""}" style="${auroraVars(h)}">${aurora()}
+    <div class="ctop"><span class="lbl">${esc(m[1])} · ${p.s}:${p.a}</span>${flag ? `<button class="srcchip qcchip" data-act="qcdiff" data-s="${p.s}" data-a="${p.a}">⚠ Quran.com</button>` : ""}
       <button class="srcchip" data-act="tafsir" aria-label="Tafsir of this ayah">${ICONS.book}Tafsir</button>
       <button class="srcchip bm ${isBookmarked(p) ? "on" : ""}" data-act="bm" data-s="${p.s}" data-a="${p.a}" aria-label="${isBookmarked(p) ? "Remove bookmark" : "Bookmark this ayah"}">${ICONS.bookmark}</button></div>
     <div class="ctext">${inPlan() && !hourlyStatus().complete && hourlyStatus().behind > 0 && ayahIndex(p) === hourlyStatus().endIdx ? `<div class="qstar-row"><span class="lastread qstar"><i>◆</i> Last ayah of your portion</span></div>` : ""}${role === "top" && starAt(p) ? `<div class="qstar-row"><span class="lastread qstar"><i>★</i> You stopped here</span></div>` : ""}${bism}<div class="arb ar" style="font-size:${size}px">${ar} <span class="ayno">﴿${arNum(p.a)}﴾</span></div>
@@ -2141,6 +2184,7 @@ function drawReader() {
     ${plan && !plan.complete && !blocked ? segsHTML(p) : ""}
     <div class="hint">${plan ? (plan.complete ? "Khatm complete · alhamdulillah" : plan.behind > 0 ? `Read up to ${plan.end.s}:${plan.end.a} · ${plan.behind} ayah${plan.behind === 1 ? "" : "s"} to be current` : blocked ? "Swipe down to read the last ayah again" : (() => { const a = aheadInfo(plan); return `<b class="ahead-count">${a.hours ? `Current ${aheadLabel(a.hours)}` : "Reading ahead"}</b> · ${a.into} of ${hp().per} into the next hour`; })()) : "Swipe for the next ayah · triple-tap for tafsir"}</div>`;
   rSetBack(0); bindReader();
+  if (!blocked) { qcCheck(p); if (next) setTimeout(() => qcCheck(next), 600); }
   $reader.querySelectorAll(".card").forEach(fitCard);
 }
 function currentCardHTML(st) {
@@ -2775,6 +2819,7 @@ document.addEventListener("click", e => {
     case "rewrite": writeReflection(+b.dataset.n); break;
     case "source": openSource(b.dataset.lib); break;
     case "hadith": openHadith(id); break;
+    case "qcdiff": openQcDiff({ s: +b.dataset.s, a: +b.dataset.a }); break;
     case "backup": doBackup(); break;
     case "restore": pickRestore(); break;
     case "restoreok": confirmRestore(); break;

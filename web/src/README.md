@@ -201,3 +201,7 @@ with `pyftsubset` to the Arabic blocks while keeping all its options), ships
 with the app in `fonts/` and is saved for offline use. The phone's own Arabic font does not know the Mushaf's open
 tanween marks (ࣰ ࣱ ࣲ) and can draw them in the wrong place. The font's option cv62 is on, so a kasra together with a
 shadda is drawn below the letter (as in ٱلدِّينِ) rather than under the shadda above it, where it can be taken for a fatha.
+In the reader, each ayah opened is also checked once against Quran.com
+(`https://api.quran.com/api/v4/quran/verses/qpc_hafs?verse_key=S:A`) with the same rules as `check_quran.py`; a real
+difference in letters or marks gives the slide a red border and a "⚠ Quran.com" button showing both texts. Results are
+kept on the device; offline, or where the page may not reach Quran.com, nothing is shown.
