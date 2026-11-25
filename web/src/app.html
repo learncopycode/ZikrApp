@@ -236,6 +236,11 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 .card.long .ctext { justify-content: flex-start; overflow-y: auto; touch-action: none; -webkit-mask-image: linear-gradient(transparent 0, #000 14px, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(transparent 0, #000 14px, #000 calc(100% - 26px), transparent); padding-bottom: 30px; }
 .longhint { display: none; text-align: center; font-size: 11.5px; color: var(--faint); padding: 0 0 4px; }
 .card.long .longhint { display: block; }
+/* In the reader, a long ayah says so clearly: a badge like "You stopped here", gone while you hold and read. */
+.card .longhint.lh-pill { max-height: 46px; padding: 4px 0 8px; }
+.lh-pill span { display: inline-block; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 700; color: var(--on-accent); background: var(--accent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--accent) 45%, transparent); animation: starIn .6s cubic-bezier(.2,1.6,.4,1) both, lhNudge 2.6s ease-in-out .8s 3; }
+@keyframes lhNudge { 0%, 70%, 100% { transform: translateY(0); } 80% { transform: translateY(-3px); } 90% { transform: translateY(1px); } }
 /* Hold-to-read: the card lifts slightly while its text is being scrolled. */
 /* Hold-to-read: the counter and hints step aside and the text fills the card. */
 .card.reading { box-shadow: var(--shadow), 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent); }
@@ -2189,7 +2194,7 @@ function ayahCardHTML(p, role) {
       <button class="srcchip bm ${isBookmarked(p) ? "on" : ""}" data-act="bm" data-s="${p.s}" data-a="${p.a}" aria-label="${isBookmarked(p) ? "Remove bookmark" : "Bookmark this ayah"}">${ICONS.bookmark}</button></div>
     <div class="ctext">${ar.includes("\u06e9") ? `<div class="sajdah-row"><span class="lastread sajdah-pill"><i>۩</i> ${BN() ? "তিলাওয়াতের সিজদা · এই আয়াত তিলাওয়াতের পর একটি সিজদা দিন" : "Sajdah · one prostration after reciting this ayah"}</span></div>` : ""}${inPlan() && !hourlyStatus().complete && hourlyStatus().behind > 0 && ayahIndex(p) === hourlyStatus().endIdx ? `<div class="qstar-row"><span class="lastread qstar"><i>◆</i> Last ayah of your portion</span></div>` : ""}${role === "top" && starAt(p) ? `<div class="qstar-row"><span class="lastread qstar"><i>★</i> You stopped here</span></div>` : ""}${bism}${qShow().ar ? `<div class="arb ar" style="font-size:${size}px">${ar} <span class="ayno">﴿${arNum(p.a)}﴾</span></div>` : ""}
       ${S.tlQuran ? `<div class="tl" style="font-size:15.5px">${esc(tl)}</div>` : ""}${qShow().tr ? `<div class="en" style="font-size:15px" ${BN() && QBN ? 'lang="bn"' : ""}>${esc(en)}</div>` : ""}${!qShow().ar ? `<div class="ayno-only">﴿${arNum(p.a)}﴾</div>` : ""}</div>
-    <div class="longhint">Hold to read and scroll · swipe for the next ayah</div>
+    <div class="longhint lh-pill"><span>☝ ${BN() ? "লম্বা আয়াত · ধরে রেখে স্ক্রল করুন" : "Long ayah · hold to scroll"}</span></div>
     <div class="cband"><span class="meta"><b>Ayah ${p.a} of ${m[3]}</b><span>${esc(m[2])} · ${m[4] === "meccan" ? "Makki" : "Madani"}</span></span>
       ${inPlan() && portionPos(p) ? `<span class="today plan-count"><b>${portionPos(p)} / ${hp().per}</b>${portionPos(p) === hp().per ? "last of this portion" : "this portion"}</span>` : `<span class="today"><b>${fmt(ayahsReadToday())}</b>read today</span>`}<span class="pbar"><i style="width:${(p.a / m[3] * 100).toFixed(1)}%"></i></span></div></div>`;
 }
