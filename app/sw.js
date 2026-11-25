@@ -1,6 +1,6 @@
 // Zikr: keeps the app on the phone so it opens offline. Serves the saved copy at once and
 // fetches a fresh one in the background; the next launch uses the update.
-const CACHE = "zikr-bc0af3e1b2";
+const CACHE = "zikr-59811964e9";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "fonts/scheherazade-new-arabic-400.woff2", "fonts/scheherazade-new-arabic-700.woff2"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: "reload" })))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
