@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Key test">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Keyboard test</title>
+<style>body{font:17px -apple-system,system-ui,sans-serif;margin:0;padding:calc(30px + env(safe-area-inset-top)) 20px 20px;background:#fffdf9;color:#222}
+input,textarea{font:17px -apple-system,system-ui,sans-serif;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 18px;border:1px solid #bbb;border-radius:12px}
+#mode{font-weight:700}</style>
+</head><body>
+<h2>Keyboard test</h2>
+<p>Running as: <span id="mode"></span></p>
+<p>Tap the box below. Does the keyboard open?</p>
+<input placeholder="Tap here and type">
+<textarea rows="3" placeholder="Or here"></textarea>
+<p id="log" style="color:#666;font-size:14px"></p>
+<script>
+document.getElementById("mode").textContent = (navigator.standalone || matchMedia("(display-mode: standalone)").matches) ? "home-screen app" : "Safari";
+document.querySelectorAll("input,textarea").forEach(el => { el.onfocus = () => log.textContent = "The box got the cursor (focused)."; el.oninput = () => log.textContent = "Typing works: " + el.value; });
+</script>
+</body></html>
