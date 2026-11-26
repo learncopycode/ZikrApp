@@ -1674,7 +1674,7 @@ function drawPrayer() {
     <div class="pprog">${list.map((_, k) => `<i class="${k < P.i ? "done" : k === P.i ? "on" : ""}"></i>`).join("")}</div>
     <div class="deck" id="pdeck">${nx ? pCardHTML(BY_ID[nx.id], nx, 0, "back") : ""}${pCardHTML(d, x, P.n, "top")}</div>
     <div class="hint">Swipe up or tap to count · hold to read</div>`;
-  $prayer.querySelectorAll(".card").forEach(fitCard);
+  $prayer.querySelectorAll(".card").forEach(c => fitCard(c));
   pSetBack(0); bindPrayerDeck();
 }
 function pCardHTML(d, x, n, role) {
@@ -1899,7 +1899,7 @@ function drawCounter() {
   const m = $counter.querySelector(".modes"), on = m.querySelector('[aria-pressed="true"]'), th = m.querySelector(".thumb");
   th.style.left = on.offsetLeft + "px"; th.style.width = on.offsetWidth + "px";
   setBack(0); bindDeck();
-  $counter.querySelectorAll(".card:not(.rcard-deck)").forEach(fitCard);
+  $counter.querySelectorAll(".card:not(.rcard-deck)").forEach(c => fitCard(c));
 }
 /* Long duas: shrink the text to fit; if it still doesn't fit, let it scroll and count from the bottom strip. */
 function fitCard(card, minAr = 20, minSmall = 12.5) {
@@ -2969,6 +2969,6 @@ document.addEventListener("keydown", e => {
 });
 document.addEventListener("visibilitychange", () => { if ($counter && document.visibilityState === "visible") keepAwake(true); });
 matchMedia("(prefers-color-scheme: light)").addEventListener?.("change", () => { if (!S.theme) { applyTheme(); render(); } });
-document.fonts?.ready?.then(() => $counter?.querySelectorAll(".card:not(.rcard-deck)").forEach(fitCard));
+document.fonts?.ready?.then(() => $counter?.querySelectorAll(".card:not(.rcard-deck)").forEach(c => fitCard(c)));
 applyTheme(); render(true);
 </script>
