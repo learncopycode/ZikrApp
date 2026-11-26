@@ -41,6 +41,9 @@ head = head.replace("__BUILD__", version)   # shown at the bottom of Home, to te
 open(os.path.join(OUT, "index.html"), "w", encoding="utf8").write(head + page + "\n</body></html>\n")
 for f in ["manifest.webmanifest", "privacy.html", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png"]:
     shutil.copy(os.path.join(HERE, "site", f), os.path.join(OUT, f))
+# The word codes for drawing the Quran with Quran.com's page fonts (see app.html).
+os.makedirs(os.path.join(OUT, "qcf"), exist_ok=True)
+shutil.copy(os.path.join(HERE, "qcf", "qcf_v2.json"), os.path.join(OUT, "qcf", "qcf_v2.json"))
 # The Quran font ships with the app (see app.html), so it is there offline too.
 os.makedirs(os.path.join(OUT, "fonts"), exist_ok=True)
 for f in os.listdir(os.path.join(HERE, "fonts")): shutil.copy(os.path.join(HERE, "fonts", f), os.path.join(OUT, "fonts", f))

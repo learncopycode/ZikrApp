@@ -205,3 +205,11 @@ In the reader, each ayah opened is also checked once against Quran.com
 (`https://api.quran.com/api/v4/quran/verses/qpc_hafs?verse_key=S:A`) with the same rules as `check_quran.py`; a real
 difference in letters or marks gives the slide a red border and a "⚠ Quran.com" button showing both texts. Results are
 kept on the device; offline, or where the page may not reach Quran.com, nothing is shown.
+
+## The Quran drawn as on Quran.com
+
+The reader draws each ayah with the King Fahd Complex page fonts that Quran.com uses (QCF V2, one font per Mushaf
+page; each word is that word's picture from the printed Madinah Mushaf). `qcf/qcf_v2.json` holds every ayah's page and
+word codes (`code_v2` from `https://api.quran.com/api/v4/verses/by_page/<page>?words=true&word_fields=code_v2`); the
+page fonts load from `https://static.qurancdn.com/fonts/quran/hafs/v2/woff2/p<page>.woff2` the first time a page is
+read and the installed app keeps them. Until a page's font is there (offline), the ayah shows in the app's own font.
