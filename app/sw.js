@@ -1,6 +1,6 @@
 // Zikr: keeps the app on the phone so it opens offline. Serves the saved copy at once and
 // fetches a fresh one in the background; the next launch uses the update.
-const CACHE = "zikr-41d226429e";
+const CACHE = "zikr-4277755641";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "fonts/scheherazade-new-arabic-400.woff2", "fonts/scheherazade-new-arabic-700.woff2", "qcf/qcf_v2.json"];
 // The Quran.com page fonts (one per Mushaf page) are kept in their own store once fetched, across app updates.
 const QCF_CACHE = "zikr-qcf-fonts";
