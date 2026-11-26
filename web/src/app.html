@@ -332,6 +332,10 @@ h2.sec small { font-family: var(--font-ui); font-size: 12px; color: var(--muted)
 .qs-row i { font-style: normal; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--line); color: var(--muted); }
 .qs-row.on i { background: var(--accent); color: var(--on-accent); }
 .ar.qcf { font-feature-settings: normal; line-height: 1.9; word-spacing: 0.06em; }
+.qcf-wait { position: relative; } .qcf-wait .arb { visibility: hidden; }
+.qcf-wait span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: var(--muted); }
+.qs-font { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+.qs-font .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .ayno-only { color: var(--accent); font-size: 20px; margin-top: 6px; font-family: var(--font-ar); }
 .card.qc-flag { box-shadow: 0 0 0 2.5px #d9534f inset, 0 18px 40px -20px rgba(0,0,0,.35); }
 .qcchip { color: #d9534f !important; border-color: #d9534f !important; font-weight: 700; }
@@ -2192,7 +2196,24 @@ function qcfLoad(page) {
   qcfLoading[page] = 1;
   const f = new FontFace(`QCF_P${page}`, `url(https://static.qurancdn.com/fonts/quran/hafs/v2/woff2/p${page}.woff2)`);
   f.load().then(ff => { document.fonts.add(ff); qcfReady[page] = 1; const q = $reader && qcfOf(quranPos()); if (q && q[0] === page && !rAnimating) drawReader(); })
-    .catch(() => {}).finally(() => { delete qcfLoading[page]; });
+    .catch(() => { qcfFailed[page] = Date.now(); const q = $reader && qcfOf(quranPos()); if (q && q[0] === page) { if (navigator.onLine === false) ui.qcfOffline = true; if (!rAnimating) drawReader(); } })
+    .finally(() => { delete qcfLoading[page]; });
+}
+/* Which font draws a slide: "Quran.com" (the default) or "Scheherazade", chosen in the Aa menu.
+   With Quran.com chosen: online, always Quran.com. Offline, a page whose Quran.com font is saved still shows in it; on
+   reaching a page whose font was never saved, that slide and every following one show in Scheherazade until the
+   internet is back (no switching back and forth), and from the next slide after that it is Quran.com again. */
+const qcfFailed = {};
+addEventListener("online", () => { ui.qcfOffline = false; for (const k in qcfFailed) delete qcfFailed[k]; });   // fonts that failed offline are tried again
+function qcfMode(p) {
+  const q = qcfOf(p);
+  if (S.qFont === "sch" || !q || typeof FontFace === "undefined") return "sch";
+  const online = navigator.onLine !== false;
+  if (online) ui.qcfOffline = false;
+  else if (ui.qcfOffline) return "sch";
+  if (qcfReady[q[0]]) return "qcf";
+  if (qcfFailed[q[0]] && Date.now() - qcfFailed[q[0]] < 20000) { if (!online) ui.qcfOffline = true; return "sch"; }
+  return "wait";   // the page's font is on its way (from the phone or from Quran.com)
 }
 document.addEventListener("pointerdown", e => { const m = document.querySelector(".qshow"); if (m && !e.target.closest(".qshow, [data-act=qshowmenu]")) m.remove(); }, true);
 // What the reader shows: the Arabic, the translation and the transliteration can each be turned off (one stays on).
@@ -2203,14 +2224,14 @@ function ayahCardHTML(p, role) {
   // A slow hue drift through each surah, continuous from ayah to ayah.
   const h = (p.s * 37 + p.a * 3) % 360;
   const bism = p.a === 1 && p.s !== 1 && p.s !== 9 ? `<div class="bism ar">${BISMILLAH}</div>` : "";
-  const flag = qcFlag(p), q = qcfOf(p);
-  if (q) { qcfLoad(q[0]); if (q[0] < 604) setTimeout(() => qcfLoad(q[0] + 1), 1500); }
-  const useQcf = q && qcfReady[q[0]];
+  const flag = qcFlag(p), q = qcfOf(p), mode = qcfMode(p);
+  if (q && mode !== "sch") { qcfLoad(q[0]); if (q[0] < 604 && navigator.onLine !== false) setTimeout(() => qcfLoad(q[0] + 1), 1500); }
+  const useQcf = mode === "qcf";
   return `<div class="card ${role} ${flag ? "qc-flag" : ""}" style="${auroraVars(h)}">${aurora()}
     <div class="ctop"><span class="lbl">${esc(m[1])} · ${p.s}:${p.a}</span>${flag ? `<button class="srcchip qcchip" data-act="qcdiff" data-s="${p.s}" data-a="${p.a}">⚠ Quran.com</button>` : ""}
       <button class="srcchip" data-act="tafsir" aria-label="Tafsir of this ayah">${ICONS.book}Tafsir</button>
       <button class="srcchip bm ${isBookmarked(p) ? "on" : ""}" data-act="bm" data-s="${p.s}" data-a="${p.a}" aria-label="${isBookmarked(p) ? "Remove bookmark" : "Bookmark this ayah"}">${ICONS.bookmark}</button></div>
-    <div class="ctext">${ar.includes("\u06e9") ? `<div class="sajdah-row"><span class="lastread sajdah-pill"><i>۩</i> ${BN() ? "তিলাওয়াতের সিজদা · এই আয়াত তিলাওয়াতের পর একটি সিজদা দিন" : "Sajdah · one prostration after reciting this ayah"}</span></div>` : ""}${inPlan() && !hourlyStatus().complete && hourlyStatus().behind > 0 && ayahIndex(p) === hourlyStatus().endIdx ? `<div class="qstar-row"><span class="lastread qstar"><i>◆</i> Last ayah of your portion</span></div>` : ""}${role === "top" && starAt(p) ? `<div class="qstar-row"><span class="lastread qstar"><i>★</i> You stopped here</span></div>` : ""}${bism}${qShow().ar ? (useQcf ? `<div class="arb ar qcf" style="font-family:QCF_P${q[0]};font-size:${Math.round(size * 1.05)}px">${q[1]}</div>` : `<div class="arb ar" style="font-size:${size}px">${ar} <span class="ayno">﴿${arNum(p.a)}﴾</span></div>`) : ""}
+    <div class="ctext">${ar.includes("\u06e9") ? `<div class="sajdah-row"><span class="lastread sajdah-pill"><i>۩</i> ${BN() ? "তিলাওয়াতের সিজদা · এই আয়াত তিলাওয়াতের পর একটি সিজদা দিন" : "Sajdah · one prostration after reciting this ayah"}</span></div>` : ""}${inPlan() && !hourlyStatus().complete && hourlyStatus().behind > 0 && ayahIndex(p) === hourlyStatus().endIdx ? `<div class="qstar-row"><span class="lastread qstar"><i>◆</i> Last ayah of your portion</span></div>` : ""}${role === "top" && starAt(p) ? `<div class="qstar-row"><span class="lastread qstar"><i>★</i> You stopped here</span></div>` : ""}${bism}${qShow().ar ? (useQcf ? `<div class="arb ar qcf" style="font-family:QCF_P${q[0]};font-size:${Math.round(size * 1.05)}px">${q[1]}</div>` : mode === "wait" ? `<div class="qcf-wait"><div class="arb ar" aria-hidden="true" style="font-size:${size}px">${ar} <span class="ayno">﴿${arNum(p.a)}﴾</span></div><span>Loading the Quran.com font…</span></div>` : `<div class="arb ar" style="font-size:${size}px">${ar} <span class="ayno">﴿${arNum(p.a)}﴾</span></div>`) : ""}
       ${S.tlQuran ? `<div class="tl" style="font-size:15.5px">${esc(tl)}</div>` : ""}${qShow().tr ? `<div class="en" style="font-size:15px" ${BN() && QBN ? 'lang="bn"' : ""}>${esc(en)}</div>` : ""}${!qShow().ar ? `<div class="ayno-only">﴿${arNum(p.a)}﴾</div>` : ""}</div>
     <div class="longhint lh-pill"><span>☝ ${BN() ? "লম্বা আয়াত · ধরে রেখে স্ক্রল করুন" : "Long ayah · hold to scroll"}</span></div>
     <div class="cband"><span class="meta"><b>Ayah ${p.a} of ${m[3]}</b><span>${esc(m[2])} · ${m[4] === "meccan" ? "Makki" : "Madani"}</span></span>
@@ -2947,8 +2968,11 @@ document.addEventListener("click", e => {
     case "qshowmenu": {
       const m = $reader?.querySelector(".qshow"); if (m) { m.remove(); break; }
       const sh = qShow(), row = (k, label) => `<button class="qs-row ${sh[k] ? "on" : ""}" data-act="qshow" data-k="${k}"><span>${label}</span><i>${sh[k] ? "On" : "Off"}</i></button>`;
-      $reader?.insertAdjacentHTML("beforeend", `<div class="qshow" role="menu">${row("ar", BN() ? "আরবি" : "Arabic")}${row("tr", BN() ? "অনুবাদ" : "Translation")}${row("tl", BN() ? "উচ্চারণ" : "Transliteration")}</div>`);
+      const fnt = S.qFont === "sch" ? "sch" : "qcom";
+      $reader?.insertAdjacentHTML("beforeend", `<div class="qshow" role="menu"><div class="qs-font"><span>${BN() ? "ফন্ট" : "Font"}</span><div class="seg"><button data-act="qfont" data-f="qcom" aria-pressed="${fnt === "qcom"}">Quran.com</button><button data-act="qfont" data-f="sch" aria-pressed="${fnt === "sch"}">Scheherazade</button></div></div>${row("ar", BN() ? "আরবি" : "Arabic")}${row("tr", BN() ? "অনুবাদ" : "Translation")}${row("tl", BN() ? "উচ্চারণ" : "Transliteration")}</div>`);
       break; }
+    case "qfont": S.qFont = b.dataset.f === "sch" ? "sch" : "qcom"; save(); drawReader(); setTimeout(() => $reader?.querySelector('[data-act="qshowmenu"]')?.click(), 0);
+      toast(S.qFont === "sch" ? "Scheherazade font" : "Quran.com font", S.qFont === "sch" ? "Kasra with shadda drawn below the letter" : "As drawn on Quran.com (King Fahd Complex page fonts)", 200, 1800); break;
     case "qshow": {
       const k = b.dataset.k, sh = qShow(); sh[k] = !sh[k];
       if (!sh.ar && !sh.tr && !sh.tl) { toast(BN() ? "অন্তত একটি দেখানো থাকবে" : "Keep at least one on", "", 200, 1400); break; }
